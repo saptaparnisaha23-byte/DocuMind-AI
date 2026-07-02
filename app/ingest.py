@@ -1,3 +1,4 @@
+from embed import chunk_text
 import fitz
 from pathlib import Path
 
@@ -34,6 +35,13 @@ def main():
     full_text = extract_pdf_text(pdf)
 
     print("\nTotal Characters:", len(full_text))
+    chunks = chunk_text(full_text)
+
+    print("\nNumber of Chunks:", len(chunks))
+
+    for i, chunk in enumerate(chunks):
+        print(f"\nChunk {i+1}\n")
+        print(chunk[:300])
 
 
 if __name__ == "__main__":
