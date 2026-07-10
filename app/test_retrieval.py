@@ -4,14 +4,13 @@ question = input("Ask a question: ")
 
 results = retrieve_chunks(question)
 
-print("\nTop Results\n")
+print("\nTop Matching Chunks\n")
 
 for i, doc in enumerate(results["documents"][0]):
 
-    print("=" * 60)
-
+    print("=" * 70)
     print(f"Result {i+1}")
+    print("=" * 70)
 
-    print(doc[:500])
-
+    print(doc)
     print()

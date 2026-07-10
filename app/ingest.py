@@ -1,5 +1,5 @@
 from embed import chunk_text, store_chunks
-from embed import chunk_text
+
 import fitz
 from pathlib import Path
 
@@ -41,8 +41,7 @@ def main():
     print(f"Total Chunks: {len(chunks)}")
 
     store_chunks(chunks)
-    chunks = chunk_text(full_text)
-
+    
     print("\nNumber of Chunks:", len(chunks))
 
     for i, chunk in enumerate(chunks):

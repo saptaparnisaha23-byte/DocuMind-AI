@@ -31,9 +31,15 @@ def store_chunks(chunks):
         embedding = model.encode(chunk).tolist()
 
         collection.add(
-            ids=[str(index)],
+            ids=[f"doc_chunk_{index}"],
             documents=[chunk],
             embeddings=[embedding]
         )
 
     print(f"\nStored {len(chunks)} chunks successfully!")
+try:
+    client.delete_collection("askmybook")
+except:
+    pass
+
+collection = client.get_or_create_collection("askmybook")
