@@ -233,7 +233,7 @@ Generate a context-aware answer.
 
 # Current Status
 
-**Project Stage:** Currently Doing Week 2
+**Project Stage:** Retrieval pipeline completed. LLM integration and user interface are planned for Week 3.
 
 **Status:** In Progress
 
