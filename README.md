@@ -1,262 +1,286 @@
-# DocuMind-AI
+# 📚 DocuMind-AI
 
-> Enterprise-style Retrieval-Augmented Generation (RAG) system for PDF-based Knowledge Retrieval, Semantic Search, Citation Generation, and LLM-powered Question Answering.
-
----
-
-## 📌 Internship Details
-
-**Internship:** 2-Year AI/ML Internship
-
-**Segment:** Segment 3 — Foundations of Applied Machine Learning
-
-**Problem Statement:** I2 — Document Question Answering
-
-**Project:** DocuMind-AI
-
-**Author:** Saptaparni Saha
+An AI-powered Retrieval-Augmented Generation (RAG) based Document Question Answering System that enables users to process PDF documents, perform semantic search using vector embeddings, and generate context-aware answers using Google Gemini.
 
 ---
 
-# Project Overview
+## 🌟 Features
 
-DocuMind-AI is an enterprise-style Retrieval-Augmented Generation (RAG) application that enables users to upload PDF documents and ask questions in natural language.
-
-Instead of relying only on the Large Language Model's general knowledge, the system retrieves the most relevant sections from uploaded documents using semantic search and generates context-aware responses using Google's Gemini API.
-
-This architecture minimizes hallucinations while producing accurate, document-grounded answers.
-
----
-
-# Project Architecture
-
-```
-                 User
-                   │
-                   ▼
-
-          Upload PDF Document
-                   │
-                   ▼
-
-         PDF Text Extraction
-            (PyMuPDF)
-                   │
-                   ▼
-
-      Recursive Text Chunking
-                   │
-                   ▼
-
-      SentenceTransformer Embeddings
-                   │
-                   ▼
-
-             ChromaDB
-        (Vector Database)
-                   │
-                   ▼
-
-        Semantic Retrieval
-                   │
-                   ▼
-
-          Relevant Chunks
-                   │
-                   ▼
-
-         Gemini LLM API
-                   │
-                   ▼
-
-      Context-Aware Answer
-```
+- 📄 PDF text extraction using PyMuPDF
+- ✂️ Intelligent document chunking
+- 🧠 Semantic embeddings using Sentence Transformers
+- 🗂️ ChromaDB vector database
+- 🔍 Semantic similarity search
+- 🤖 Google Gemini integration
+- 📚 Retrieval-Augmented Generation (RAG)
+- 💻 Modular Python project structure
+- 📝 Environment variable support using python-dotenv
 
 ---
 
-# Features Implemented
+## 📌 Project Information
 
-- PDF Upload Support
+| Item | Details |
+|------|---------|
+| Project Name | DocuMind-AI |
+| Problem Statement | I2 – Document Q&A (RAG over a Focused Corpus) |
+| Segment | Foundations of Applied Machine Learning |
+| Internship | Summer Internship 2026 |
+
+---
+
+# 📖 Project Overview
+
+DocuMind-AI is a Retrieval-Augmented Generation (RAG) based application developed as part of the Summer Internship 2026 under the Foundations of Applied Machine Learning segment.
+
+The project allows users to query information from PDF documents using natural language. Instead of sending an entire document to a Large Language Model, the system first retrieves the most relevant document sections using semantic vector search and then provides those sections as context to Google Gemini for answer generation.
+
+The workflow includes:
+
+- Extracting text from PDF documents
+- Splitting text into semantic chunks
+- Creating vector embeddings using Sentence Transformers
+- Storing embeddings in ChromaDB
+- Retrieving relevant document chunks using similarity search
+- Generating grounded answers using Google Gemini
+
+This approach reduces hallucinations while providing more accurate, document-based responses.
+
+---
+
+# 🎯 Objectives
+
+- Extract text from PDF documents
+- Generate semantic document chunks
+- Build vector embeddings
+- Store embeddings in ChromaDB
+- Retrieve relevant information using semantic search
+- Integrate Google Gemini for answer generation
+- Implement an end-to-end Retrieval-Augmented Generation pipeline
+
+---
+
+# 📅 Internship Progress
+
+## ✅ Week 1
+
+- GitHub Repository Setup
+- Project Structure
+- README
+- Design Document
+- PDF Text Extraction using PyMuPDF
+- Initial Git Commits
+
+---
+
+## ✅ Week 2
+
+- Document Chunking
+- Sentence Transformer Embeddings
+- ChromaDB Integration
+- Semantic Retrieval Pipeline
+- ADR-001 Documentation
+- Retrieval Testing
+
+---
+
+## ✅ Week 3 (Current Progress)
+
+- Google Gemini Integration
+- Complete Retrieval-Augmented Generation Pipeline
+- End-to-End Question Answering through Terminal
+
+---
+
+# ✨ Current Capabilities
+
+### 📄 Document Processing
+
 - PDF Text Extraction
-- Recursive Text Chunking
-- Semantic Embedding Generation
-- ChromaDB Vector Storage
+- Intelligent Text Chunking
+
+### 🧠 Artificial Intelligence
+
+- Sentence Transformer Embeddings
 - Semantic Similarity Search
-- Google Gemini API Integration
-- Modular Python Project Structure
+- Google Gemini Response Generation
+
+### 🗂️ Vector Database
+
+- ChromaDB Storage
+- Vector Retrieval
+
+### 💻 Software Engineering
+
+- Modular Codebase
+- Environment Variable Support
+- Git Version Control
 
 ---
 
-# Technology Stack
-
-| Component | Technology |
-|------------|------------|
-| Programming Language | Python 3.12 |
-| Frontend *(Upcoming)* | Streamlit |
-| PDF Processing | PyMuPDF |
-| Text Chunking | LangChain |
-| Embedding Model | Sentence Transformers |
-| Vector Database | ChromaDB |
-| Large Language Model | Google Gemini |
-| Version Control | Git & GitHub |
-
----
-
-# Project Structure
+# 🏗️ System Architecture
 
 ```
-DocuMind-AI/
+                PDF Document
+                     │
+                     ▼
+          PyMuPDF Text Extraction
+                     │
+                     ▼
+            Document Chunking
+                     │
+                     ▼
+    Sentence Transformer Embeddings
+                     │
+                     ▼
+             ChromaDB Vector Store
+                     │
+                     ▼
+             Semantic Retrieval
+                     │
+                     ▼
+              Google Gemini
+                     │
+                     ▼
+        Context-Aware AI Response
+```
 
+---
+
+# 📂 Project Structure
+
+```
+DocuMind-AI
 │
 ├── app/
 │   ├── app.py
-│   ├── ingest.py
-│   ├── embed.py
-│   ├── retrieve.py
 │   ├── chatbot.py
-│   └── test_gemini.py
+│   ├── embed.py
+│   ├── ingest.py
+│   ├── retrieve.py
+│   ├── main.py
+│   ├── test_gemini.py
+│   └── test_retrieval.py
 │
 ├── data/
 │   └── pdfs/
 │
 ├── docs/
+│   ├── adr/
 │   └── design_doc.md
 │
 ├── tests/
 │
 ├── requirements.txt
-├── .gitignore
-└── README.md
+├── README.md
+└── .gitignore
 ```
 
 ---
 
-# Current Workflow
+# 🛠 Tech Stack
 
-### Step 1
-
-Upload a PDF document.
-
-↓
-
-### Step 2
-
-Extract text using PyMuPDF.
-
-↓
-
-### Step 3
-
-Split the text into overlapping chunks.
-
-↓
-
-### Step 4
-
-Generate semantic embeddings.
-
-↓
-
-### Step 5
-
-Store embeddings inside ChromaDB.
-
-↓
-
-### Step 6
-
-Search the vector database for the most relevant chunks.
-
-↓
-
-### Step 7
-
-Send retrieved chunks to Gemini.
-
-↓
-
-### Step 8
-
-Generate a context-aware answer.
+| Layer | Technology |
+|---------|------------|
+| Language | Python |
+| PDF Processing | PyMuPDF |
+| Chunking | LangChain RecursiveCharacterTextSplitter |
+| Embedding Model | Sentence Transformers (all-MiniLM-L6-v2) |
+| Vector Database | ChromaDB |
+| LLM | Google Gemini |
+| Environment Variables | python-dotenv |
+| Version Control | Git & GitHub |
 
 ---
 
-# Progress
+# ⚙️ Installation
 
-## Week 1 ✅
+```bash
+git clone <your-repository-url>
 
-- Repository Setup
-- GitHub Workflow
-- Project Documentation
-- Design Document
-- Folder Structure
-- Initial Commits
-- PDF Text Extraction
+cd DocuMind-AI
 
----
+pip install -r requirements.txt
+```
 
-## Week 2 ✅
+Create a `.env` file:
 
-- Recursive Text Chunking
-- Embedding Generation
-- ChromaDB Integration
-- Semantic Retrieval
-- Google Gemini API Integration
+```
+GEMINI_API_KEY=YOUR_API_KEY
+```
 
----
+Run the application:
 
-# Upcoming Work
-
-- Connect Retriever with Gemini
-- Build Complete RAG Pipeline
-- Streamlit Chat Interface
-- Multi-PDF Support
-- Source Citation Display
-- Conversation Memory
-- Deployment
+```bash
+python app/main.py
+```
 
 ---
 
-# What I Learned
+# 📊 Current Progress
 
-- Git and GitHub version control workflow.
-- Markdown documentation and project organization.
-- PDF text extraction using PyMuPDF.
-- Text chunking using LangChain.
-- Semantic embeddings using Sentence Transformers.
-- Vector databases with ChromaDB.
-- Semantic retrieval using vector similarity search.
-- Integrating Google Gemini API with Python.
-- Fundamentals of Retrieval-Augmented Generation (RAG).
-
----
-
-# Current Status
-
-**Project Stage:** Retrieval pipeline completed. LLM integration and user interface are planned for Week 3.
-
-**Status:** In Progress
-
-The project can successfully:
-
-- Read PDF documents
-- Extract document text
-- Split text into chunks
-- Generate embeddings
-- Store vectors in ChromaDB
-- Retrieve relevant chunks
-- Connect to Gemini API
-
-The next milestone is to combine retrieval with Gemini to build a fully functional RAG-powered PDF Question Answering system.
+| Feature | Status |
+|---------|--------|
+| Repository Setup | ✅ |
+| Design Document | ✅ |
+| PDF Extraction | ✅ |
+| Document Chunking | ✅ |
+| Sentence Transformer Embeddings | ✅ |
+| ChromaDB Integration | ✅ |
+| Semantic Search | ✅ |
+| Gemini Integration | ✅ |
+| End-to-End RAG Pipeline | ✅ |
+| Streamlit Interface | ⏳ Planned |
+| Source Citations | ⏳ Planned |
+| Multi-PDF Support | ⏳ Planned |
+| Unit Testing | ⏳ Planned |
 
 ---
 
-## Author
+# 📚 What I Learned
+
+### Week 1
+
+- Project organization using GitHub
+- PDF processing with PyMuPDF
+- Fundamentals of Retrieval-Augmented Generation
+
+### Week 2
+
+- Document chunking
+- Vector embeddings
+- ChromaDB
+- Semantic search
+
+### Week 3
+
+- Google Gemini integration
+- Prompt engineering
+- Building a complete Retrieval-Augmented Generation pipeline
+
+---
+
+# 🚀 Future Enhancements
+
+- Streamlit Web Interface
+- Source Citations
+- Dynamic PDF Upload
+- Multi-document Support
+- Chat History
+- Hybrid Search
+- Cloud Deployment
+- Docker Support
+
+---
+
+# 👩‍💻 Developer
 
 **Saptaparni Saha**
 
-B.Tech AI & Data Engineering
+B.Tech – Artificial Intelligence & Data Engineering
 
 Lovely Professional University
 
----
+Summer Internship 2026
+
+Problem Statement: **I2 – Document Q&A (RAG over a Focused Corpus)**
