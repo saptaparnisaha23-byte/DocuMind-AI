@@ -34,6 +34,19 @@ def initialize_database():
     chunks INTEGER DEFAULT 0
 )
 """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS session_retrieval_memory (
+            session_id TEXT PRIMARY KEY,
+            topic TEXT,
+            documents TEXT,
+            compared_documents TEXT,
+            chapter TEXT,
+            page INTEGER,
+            entity TEXT,
+            mode TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
 
     conn.commit()
     conn.close()

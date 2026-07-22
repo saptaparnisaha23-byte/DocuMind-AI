@@ -91,3 +91,72 @@ def delete_session(session_id):
 
     conn.commit()
     conn.close()
+
+
+import json
+
+def get_retrieval_memory(session_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT topic, documents, compared_documents, chapter, page, entity, mode
+        FROM session_retrieval_memory
+        WHERE session_id = ?
+    """, (session_id,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    if not row:
+        return {
+            "topic": None,
+            "documents": [],
+            "compared_documents": [],
+            "chapter": None,
+            "page": None,
+            "entity": None,
+            "mode": None
+        }
+        
+    try:
+        docs = json.loads(row["documents"]) if row["documents"] else []
+    except Exception:
+        docs = []
+        
+    try:
+        comp_docs = json.loads(row["compared_documents"]) if row["compared_documents"] else []
+    except Exception:
+        comp_docs = []
+        
+    return {
+        "topic": row["topic"],
+        "documents": docs,
+        "compared_documents": comp_docs,
+        "chapter": row["chapter"],
+        "page": row["page"],
+        "entity": row["entity"],
+        "mode": row["mode"]
+    }
+
+def save_retrieval_memory(session_id, mem):
+    conn = get_connection()
+    cursor = conn.cursor()
+    docs_json = json.dumps(mem.get("documents", []))
+    comp_docs_json = json.dumps(mem.get("compared_documents", []))
+    
+    cursor.execute("""
+        INSERT OR REPLACE INTO session_retrieval_memory(
+            session_id, topic, documents, compared_documents, chapter, page, entity, mode, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    """, (
+        session_id,
+        mem.get("topic"),
+        docs_json,
+        comp_docs_json,
+        mem.get("chapter"),
+        mem.get("page"),
+        mem.get("entity"),
+        mem.get("mode")
+    ))
+    conn.commit()
+    conn.close()

@@ -10,6 +10,8 @@ from pathlib import Path
 from app.memory import (
     get_history,
     add_message,
+    get_retrieval_memory,
+    save_retrieval_memory,
 )
 
 load_dotenv()
@@ -44,6 +46,11 @@ def triage_user_query(history, question, documents_list):
     
     Student's Latest Question:
     {question}
+    
+    PRONOUN & CONTEXT RESOLUTION RULES:
+    1. Resolve all pronouns/references (e.g. "this", "that", "these", "those", "them", "it", "first one", "second one", "former", "latter", "previous one") to their concrete names/documents from the conversation history.
+    2. Comparison context preservation: If the history discussed a comparison between A and B (e.g. MTH176 and MTH178) and the follow-up asks "What changed?", rewrite it to: "What changed between A and B?".
+    3. Diagram-specific rewriting: If the student asks to "explain the graph" or "explain the figure", rewrite it to target the active topic (e.g. "Explain the graph associated with Polynomial Regression").
     
     CLASSIFICATION RULES:
     - INTENT: Choose one of:
@@ -525,6 +532,7 @@ def ask_question(session_id, question, document=None):
 
     try:
         history = get_history(session_id)
+        retrieval_mem = get_retrieval_memory(session_id)
         
         topic_before = "None"
         for message in reversed(history):
@@ -547,6 +555,14 @@ def ask_question(session_id, question, document=None):
         # 1. Intent Triage and Query Rewriting via Gemini
         triage = triage_user_query(history, question, documents_list)
         intent = triage.get("intent", "New Topic")
+        
+        # If the user switches topic, clear previous context
+        if intent == "New Topic":
+            retrieval_mem["compared_documents"] = []
+            retrieval_mem["documents"] = []
+            retrieval_mem["chapter"] = None
+            retrieval_mem["page"] = None
+            
         query_type = triage.get("query_type", "general")
         active_topic = triage.get("active_topic", question)
         active_subject = triage.get("active_subject", "General")
@@ -557,6 +573,11 @@ def ask_question(session_id, question, document=None):
         reason_doc_selection = triage.get("reason_for_document_selection", "None")
 
         comparison_docs = identify_mentioned_documents(question, documents_list)
+        
+        # Restore comparison context in case of follow-ups
+        if not comparison_docs and intent == "Follow-up" and len(retrieval_mem.get("compared_documents", [])) >= 2:
+            comparison_docs = retrieval_mem["compared_documents"]
+
         if (query_type == "comparison" or "compare" in question.lower() or "difference" in question.lower() or "change" in question.lower()):
             if document and document not in comparison_docs:
                 comparison_docs.append(document)
@@ -730,28 +751,75 @@ def ask_question(session_id, question, document=None):
                                 "id": unique_chunk_id
                             })
             else:
-                # First Pass: Semantic Search (Top 25)
-                search_doc = document if document else None
-                results = retrieve_chunks(
-                    question=normalized_search_query,
-                    top_k=25,
-                    document=search_doc
-                )
-                
-                raw_documents = results.get("documents", [[]])[0]
-                raw_metadatas = results.get("metadatas", [[]])[0]
-                raw_distances = results.get("distances", [[]])[0]
-                
-                seen_ids = set()
-                all_candidates = []
-                
-                for idx, doc in enumerate(raw_documents):
-                    meta = raw_metadatas[idx] if idx < len(raw_metadatas) else {}
-                    dist = raw_distances[idx] if idx < len(raw_distances) else 1.0
-                    doc_name = meta.get("document", "Unknown")
-                    page_num = meta.get("page", 1)
-                    chunk_num = meta.get("chunk", 1)
-                    unique_chunk_id = f"{doc_name}_page_{page_num}_chunk_{chunk_num}"
+                # 3. Document Persistence Check: If previous turn had retrieved documents, search them first
+                used_persistence = False
+                prev_docs = retrieval_mem.get("documents", [])
+                if intent == "Follow-up" and prev_docs and not document:
+                    all_candidates = []
+                    seen_ids = set()
+                    for doc_name in prev_docs:
+                        results = retrieve_chunks(
+                            question=normalized_search_query,
+                            top_k=12,
+                            document=doc_name
+                        )
+                        raw_documents = results.get("documents", [[]])[0]
+                        raw_metadatas = results.get("metadatas", [[]])[0]
+                        raw_distances = results.get("distances", [[]])[0]
+                        
+                        for idx, doc_text in enumerate(raw_documents):
+                            meta = raw_metadatas[idx] if idx < len(raw_metadatas) else {}
+                            dist = raw_distances[idx] if idx < len(raw_distances) else 1.0
+                            page_num = meta.get("page", 1)
+                            chunk_num = meta.get("chunk", 1)
+                            unique_chunk_id = f"{doc_name}_page_{page_num}_chunk_{chunk_num}"
+                            
+                            if unique_chunk_id not in seen_ids:
+                                seen_ids.add(unique_chunk_id)
+                                all_candidates.append({
+                                    "doc": doc_text,
+                                    "meta": meta,
+                                    "distance": dist,
+                                    "id": unique_chunk_id
+                                })
+                    # We will temporarily score candidates to see if we have any good matches.
+                    # If the maximum hybrid score of these chunks is extremely low (meaning no good chunks matched), 
+                    # we set used_persistence to False so it falls back to full database search.
+                    if all_candidates:
+                        temp_max_score = 0.0
+                        for cand in all_candidates:
+                            dist = cand["distance"]
+                            semantic_score = 1.0 / (1.0 + dist)
+                            keyword_score = compute_keyword_score(normalized_search_query, cand["doc"])
+                            h_score = 0.5 * semantic_score + 0.5 * keyword_score
+                            if h_score > temp_max_score:
+                                temp_max_score = h_score
+                        if temp_max_score >= 0.25:
+                            used_persistence = True
+                            
+                if not used_persistence:
+                    # First Pass: Semantic Search (Top 25)
+                    search_doc = document if document else None
+                    results = retrieve_chunks(
+                        question=normalized_search_query,
+                        top_k=25,
+                        document=search_doc
+                    )
+                    
+                    raw_documents = results.get("documents", [[]])[0]
+                    raw_metadatas = results.get("metadatas", [[]])[0]
+                    raw_distances = results.get("distances", [[]])[0]
+                    
+                    seen_ids = set()
+                    all_candidates = []
+                    
+                    for idx, doc in enumerate(raw_documents):
+                        meta = raw_metadatas[idx] if idx < len(raw_metadatas) else {}
+                        dist = raw_distances[idx] if idx < len(raw_distances) else 1.0
+                        doc_name = meta.get("document", "Unknown")
+                        page_num = meta.get("page", 1)
+                        chunk_num = meta.get("chunk", 1)
+                        unique_chunk_id = f"{doc_name}_page_{page_num}_chunk_{chunk_num}"
                     
                     seen_ids.add(unique_chunk_id)
                     all_candidates.append({
@@ -859,6 +927,31 @@ def ask_question(session_id, question, document=None):
                     topic_boost = 0.15
                     hybrid_score += topic_boost
                     
+                # Adaptive Context and Retrieval Memory Boosts
+                mem_doc_boost = 0.0
+                prev_docs = retrieval_mem.get("documents", [])
+                if prev_docs and meta_doc in prev_docs:
+                    mem_doc_boost = 0.20
+                    hybrid_score += mem_doc_boost
+                    
+                proximity_boost = 0.0
+                prev_page = retrieval_mem.get("page")
+                curr_page = meta.get("page")
+                if prev_page is not None and curr_page is not None:
+                    try:
+                        if abs(int(curr_page) - int(prev_page)) <= 1:
+                            proximity_boost = 0.15
+                            hybrid_score += proximity_boost
+                    except Exception:
+                        pass
+                        
+                chapter_boost = 0.0
+                prev_chapter = retrieval_mem.get("chapter")
+                curr_chapter = extract_chapter_context(doc, meta_doc)
+                if prev_chapter and curr_chapter and prev_chapter.lower() == curr_chapter.lower():
+                    chapter_boost = 0.10
+                    hybrid_score += chapter_boost
+                    
                 cand["score"] = round(hybrid_score, 4)
                 cand["semantic_score"] = round(semantic_score, 4)
                 cand["keyword_score"] = round(keyword_score, 4)
@@ -867,7 +960,20 @@ def ask_question(session_id, question, document=None):
                 cand["mmr_score"] = 0.0
                 
             # Rerank & MMR
-            all_candidates.sort(key=lambda x: x["score"], reverse=True)
+            # Sort candidates preferring highest score, semantic score, and nearest page
+            def candidate_sort_key(cand):
+                score = cand["score"]
+                sem_score = cand.get("semantic_score", 0.0)
+                meta = cand["meta"]
+                prev_p = retrieval_mem.get("page")
+                curr_p = meta.get("page")
+                try:
+                    p_dist = abs(int(curr_p) - int(prev_p)) if (prev_p is not None and curr_p is not None) else 9999
+                except Exception:
+                    p_dist = 9999
+                return (-score, -sem_score, p_dist)
+                
+            all_candidates.sort(key=candidate_sort_key)
             mmr_ranked = compute_mmr(all_candidates)
             
             # Select target candidate size based on intent
@@ -943,6 +1049,47 @@ def ask_question(session_id, question, document=None):
                 content = content.split("||CITATIONS||")[0]
             conversation += f"{message['role']}: {content}\n"
 
+        # Diagram mode detection
+        diagram_keywords = {"graph", "figure", "flowchart", "architecture", "image", "table", "diagram"}
+        has_diagram_keyword = any(word in question.lower() or word in rewritten_query.lower() for word in diagram_keywords)
+        has_diagram_chunk = False
+        for item in selected_candidates:
+            doc_text = item["doc"].lower()
+            if any(word in doc_text for word in diagram_keywords):
+                has_diagram_chunk = True
+                break
+                
+        diagram_mode = has_diagram_keyword or has_diagram_chunk
+        
+        diagram_instructions = ""
+        if diagram_mode:
+            diagram_instructions = """
+            DIAGRAM EXPLANATION MODE IS ACTIVE:
+            The context contains or refers to a diagram, graph, figure, table, flowchart, or architecture. You MUST structure your answer to explicitly explain:
+            - What the figure/diagram shows
+            - The X-axis and Y-axis labels and ranges (if it is a graph)
+            - The meaning of any curves, points, shapes, or rows
+            - Step-by-step interpretation of the diagram
+            - Practical exam takeaways or key formulas associated with it
+            Do not list every graph/figure in the document; only explain the specific one relevant to the retrieval.
+            """
+            
+        simple_explanation_keywords = {"explain simply", "explain like i'm 10", "easy words", "simple explanation", "eli5", "analogy", "example", "simplification"}
+        is_simple_explanation = any(word in question.lower() for word in simple_explanation_keywords) or is_example_request
+        
+        analogy_instructions = ""
+        if is_simple_explanation:
+            analogy_instructions = """
+            SIMPLE EXPLANATION & ANALOGY MODE ACTIVE:
+            1. First, provide a clear, grounded explanation of the concept based ONLY on the retrieved document chunks.
+            2. Then, provide a creative, easy-to-understand analogy or example from everyday life to simplify the concept.
+            3. You MUST clearly separate the analogy from the grounded facts by using the exact heading:
+               🤖 Simple Analogy (Generated by AI)
+               (Not from the uploaded document)
+               [Insert analogy here]
+            4. Never mix or blend the analogy text with the grounded citation-backed explanation. Keep them strictly separate.
+            """
+
         # 6. Prompt Engineering
         prompt = f"""
         You are DocuMind-AI, an expert AI Grounding Tutor. Your absolute priority is accuracy, grounding, textbook-quality writing, and providing clean, compact, exam-oriented responses.
@@ -955,6 +1102,9 @@ def ask_question(session_id, question, document=None):
         
         Student's Question:
         {question}
+        
+        {diagram_instructions}
+        {analogy_instructions}
         
         STRICT GROUNDING INSTRUCTIONS:
         1. Always answer from the retrieved context first. Never hallucinate or rely on outside knowledge when grounding is enabled.
@@ -1136,6 +1286,22 @@ def ask_question(session_id, question, document=None):
         citations_str = json.dumps(formatted_sources)
         debug_str = json.dumps(debug_payload)
         full_content = clean_answer + "||CITATIONS||" + citations_str + "||DEBUG||" + debug_str
+
+        # Update and save retrieval memory
+        last_doc_names = list(set(src["document"] for src in formatted_sources if "document" in src))
+        if len(comparison_docs) >= 2:
+            retrieval_mem["compared_documents"] = comparison_docs
+        else:
+            retrieval_mem["compared_documents"] = []
+            
+        retrieval_mem["documents"] = last_doc_names
+        retrieval_mem["topic"] = active_topic
+        
+        if formatted_sources:
+            retrieval_mem["page"] = formatted_sources[0]["page"]
+            retrieval_mem["chapter"] = extract_chapter_context(formatted_sources[0]["content"], formatted_sources[0]["document"])
+            
+        save_retrieval_memory(session_id, retrieval_mem)
 
         add_message(session_id, "Assistant", full_content)
 
