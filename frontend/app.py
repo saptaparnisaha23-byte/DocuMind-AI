@@ -10,6 +10,10 @@ from urllib.parse import quote, unquote
 # Make sure project root is in python path
 sys.path.append(str(Path(__file__).parent.parent))
 
+# Initialize local SQLite database schema for standalone deployments
+from app.database import initialize_database
+initialize_database()
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 UPLOAD_FOLDER = PROJECT_ROOT / "uploads"
 
