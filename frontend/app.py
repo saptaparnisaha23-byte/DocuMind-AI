@@ -764,366 +764,338 @@ elif st.session_state.page == "upload":
             col1, col2 = st.columns([5, 1])
             col1.write(f"📄 **{doc}**")
             if col2.button("🗑️", key=f"del_{doc}"):
-                with st.spinner(f"Deleting {doc}..."):
-                    delete_res = delete_document_api(doc)
-                    if delete_res.get("success"):
-                        st.success(f"Deleted {doc}")
-                        st.rerun()
-                    else:
-                        st.error(delete_res.get("detail", f"Failed to delete {doc}."))
-    else:
-        st.info("No documents uploaded yet.")
+                delete_chat(session_id)
+            except Exception:
+                pass
+            current_theme = st.session_state.theme
+            st.query_params.clear()
+            st.query_params["theme"] = current_theme
+            st.session_state.session_id = None
+            st.session_state.page = "home"
+            st.rerun(scope="app")
 
-elif st.session_state.page == "chat":
-    st.html(topbar_html)
-
-    session_id = st.session_state.session_id
-    history_res = get_chat(session_id)
-    messages = history_res.get("messages", [])
-
-    col_h1, col_h2, col_h3 = st.columns([6, 1.5, 1.5])
-    col_h1.subheader("💬 Chat Session")
-
-    if col_h2.button("✏️ Rename Chat", use_container_width=True):
-        st.session_state.show_rename = True
-
-    if col_h3.button("🗑️ Delete Session", use_container_width=True):
-        try:
-            delete_chat(session_id)
-        except Exception:
-            pass
-        current_theme = st.session_state.theme
-        st.query_params.clear()
-        st.query_params["theme"] = current_theme
-        st.session_state.session_id = None
-        st.session_state.page = "home"
-        st.rerun()
-
-    if st.session_state.get("show_rename"):
-        current_title = "Untitled chat"
-        for chat in chats:
-            if chat.get("session_id") == session_id:
-                current_title = chat.get("title") or "Untitled chat"
-                break
-        
-        col_rename, col_act = st.columns([3, 1])
-        new_title = col_rename.text_input("New Session Title", value=current_title, key="rename_title_input")
-        col_save, col_cancel = col_act.columns(2)
-        if col_save.button("Save"):
-            if new_title.strip():
-                try:
-                    from app.database import get_connection
-                    conn = get_connection()
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        UPDATE chat_messages
-                        SET title = ?
-                        WHERE session_id = ? AND id = (
-                            SELECT MIN(id) FROM chat_messages WHERE session_id = ?
-                        )
-                    """, (new_title.strip(), session_id, session_id))
-                    conn.commit()
-                    conn.close()
-                except Exception:
-                    pass
-            st.session_state.show_rename = False
-            st.rerun()
-        if col_cancel.button("Cancel"):
-            st.session_state.show_rename = False
-            st.rerun()
-
-    st.html('<div class="chat-container">')
-
-    # Auto-scroll JS
-    auto_scroll_js = '''
-    <script>
-    (function() {
-        const tryScroll = () => {
-            const mainEl = window.parent.document.querySelector('[data-testid="stMainBlockContainer"]');
-            if (mainEl) { mainEl.scrollTop = mainEl.scrollHeight; }
-            window.parent.scrollTo(0, window.parent.document.body.scrollHeight);
-        };
-        setTimeout(tryScroll, 200);
-        setTimeout(tryScroll, 600);
-    })();
-    </script>
-    '''
-    st.html(auto_scroll_js)
-
-    for idx, msg in enumerate(messages):
-        role = msg["role"]
-        content = msg["content"]
-
-        if role.lower() == "user":
-            user_msg_html = f'<div class="user-msg-bubble"><strong>You:</strong><br>{content}</div>'
-            st.html(user_msg_html)
-        else:
-            import json
-            sources_list = []
-            debug_info = None
-
-            if "||CITATIONS||" in content:
-                parts = content.split("||CITATIONS||", 1)
-                clean_content = parts[0]
-                
-                citations_and_debug = parts[1]
-                if "||DEBUG||" in citations_and_debug:
-                    sub_parts = citations_and_debug.split("||DEBUG||", 1)
-                    citations_str = sub_parts[0]
-                    debug_str = sub_parts[1]
+        if st.session_state.get("show_rename"):
+            current_title = "Untitled chat"
+            for chat in chats:
+                if chat.get("session_id") == session_id:
+                    current_title = chat.get("title") or "Untitled chat"
+                    break
+            
+            col_rename, col_act = st.columns([3, 1])
+            new_title = col_rename.text_input("New Session Title", value=current_title, key="rename_title_input")
+            col_save, col_cancel = col_act.columns(2)
+            if col_save.button("Save"):
+                if new_title.strip():
                     try:
-                        sources_list = json.loads(citations_str)
-                    except Exception:
-                        sources_list = []
-                    try:
-                        debug_info = json.loads(debug_str)
-                    except Exception:
-                        debug_info = None
-                else:
-                    try:
-                        sources_list = json.loads(citations_and_debug)
-                    except Exception:
-                        sources_list = []
-            else:
-                clean_content = content
-
-            body_html = render_assistant_response(clean_content)
-            safe_text = _safe(clean_content)
-
-            ai_card_html = f'''
-            <div class="ai-response-card">
-                <textarea class="copy-textarea" style="display:none;">{safe_text}</textarea>
-                <div class="ai-response-header">
-                    <div class="ai-avatar">DM</div>
-                    <div class="ai-meta">
-                        <div class="ai-title">DocuMind AI <span class="ai-verified-tag">Grounding Active</span></div>
-                    </div>
-                    <div class="ai-actions">
-                        <button class="ai-action-btn copy-btn" onclick="navigator.clipboard.writeText(this.closest('.ai-response-card').querySelector('.copy-textarea').value); showCopyToast();" title="Copy response">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H5.25m11.9-3.664A2.251 2.251 0 0 0 15 2.25h-3a2.251 2.251 0 0 0-2.15 1.586m5.8 0c.065.21.1.433.1.664v.75h-6V4.5c0-.231.035-.454.1-.664M6.75 7.375c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v12.75c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.375Z" /></svg>
-                        </button>
-                        <button class="ai-action-btn like-btn" onclick="this.classList.toggle('active')" title="Like response">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 0 1 2.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 0 0 .322-1.672V2.75a.75.75 0 0 1 .75-.75 2.25 2.25 0 0 1 2.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282m0 0h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 0 1-2.849 7.73c-.378.468-1.01.442-1.393.062L16.89 13.71c-.26-.26-.606-.41-.968-.41H9.513M9.513 13.15c0 .323-.1.644-.287.915l-1.413 2.12c-.229.344-.616.555-1.034.555H4.144a.75.75 0 0 1-.75-.75v-6.307c0-.312.18-.598.463-.728l3.693-1.684a.75.75 0 0 1 1.011.683v2.166Z" /></svg>
-                        </button>
-                        <button class="ai-action-btn dislike-btn" onclick="this.classList.toggle('active')" title="Dislike response">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M7.367 13.75c-.806 0-1.533.446-2.031 1.08a9.041 9.041 0 0 1-2.861 2.4c-.723.384-1.35.956-1.653 1.715a4.498 4.498 0 0 0-.322 1.672v.679c0 .414.336.75.75.75a2.25 2.25 0 0 0 2.25-2.25c0-1.152.26-2.243.723-3.218.266-.558-.107-1.282-.725-1.282m0 0h-3.126c-1.026 0-1.945-.694-2.054-1.715a12.137 12.137 0 0 1-.068-1.285 11.95 11.95 0 0 1 2.849-7.73c.378-.468 1.01-.442 1.393-.062L7.11 10.29c.26.26.606.41.968.41h6.409m0-1.15c0-.323.1-.644.287-.915l1.413-2.12c.229-.344.616-.555 1.034-.555h2.006c.414 0 .75.336.75.75v6.307c0 .312-.18.598-.463.728l-3.693 1.684a.75.75 0 0 1-1.011-.683V10.29Z" /></svg>
-                        </button>
-                    </div>
-                </div>
-                <div class="ai-response-body">
-                    {body_html}
-                </div>
-            </div>
-            '''
-            st.html(ai_card_html)
-
-            # Rerender developer information if Developer Mode is active
-            if st.session_state.get("developer_mode") and debug_info:
-                with st.expander("🛠️ Developer Debug Panel", expanded=False):
-                    st.html(f'''
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; font-size:12px; margin-bottom:12px; border-bottom:1px solid rgba(128,128,128,0.1); padding-bottom:10px;">
-                        <div><strong>Intent:</strong> <span style="color:#3b82f6;">{debug_info.get("intent", "Unknown")}</span></div>
-                        <div><strong>Topic Pipeline:</strong> {debug_info.get("topic_before", "None")} ➔ <span style="color:#10b981;">{debug_info.get("topic_after", "None")}</span></div>
-                        <div><strong>Selected Document:</strong> {debug_info.get("selected_document", "All")}</div>
-                        <div><strong>Subject Domain:</strong> {debug_info.get("selected_chapter", "General")}</div>
-                        <div><strong>Rewritten Query:</strong> <em>"{debug_info.get("query_rewrite", "None")}"</em></div>
-                        <div><strong>Pipeline Latency:</strong> <span style="color:#eab308;">{debug_info.get("latency", 0)} ms</span></div>
-                    </div>
-                    
-                    <div style="font-size:12px; font-weight:600; margin-bottom:6px;">Document Routing Details:</div>
-                    <ul style="font-size:11px; margin-bottom:12px; margin-left:16px;">
-                        <li><strong>Routing Reason:</strong> {debug_info.get("reason_for_document_selection", "None")}</li>
-                        <li><strong>Topic Switch Reason:</strong> {debug_info.get("reason_for_topic_switch", "None")}</li>
-                        <li><strong>Rejection Log:</strong> {debug_info.get("reason_for_retrieval_rejection", "None")}</li>
-                    </ul>
-                    
-                    <div style="font-size:12px; font-weight:600; margin-bottom:6px;">Ranked Candidate Chunks & Similarity Metrics:</div>
-                    ''')
-                    
-                    for chunk in debug_info.get("retrieved_chunks", []):
-                        cid = chunk.get("id", "Unknown")
-                        score = chunk.get("score", 0.0)
-                        doc_name = chunk.get("document", "Unknown")
-                        page = chunk.get("page", "Unknown")
-                        text_preview = chunk.get("chunk_text", "")
-                        
-                        st.html(f'''
-                        <div style="font-size:11px; margin-top:8px; border-top:1px solid rgba(128,128,128,0.1); padding-top:6px; margin-bottom:4px;">
-                            <strong>ID:</strong> {cid} | <strong>Doc:</strong> {doc_name} (Page {page})<br>
-                            <strong>Scores:</strong> Semantic: {chunk.get("semantic_score", 0.0)} | Keywords: {chunk.get("keyword_score", 0.0)} | MMR Score: {chunk.get("mmr_score", 0.0)} | <strong>Final Hybrid Score:</strong> <span style="color:#3b82f6;">{score}</span>
-                        </div>
-                        ''')
-                        st.text(text_preview[:400] + ("..." if len(text_preview) > 400 else ""))
-                        
-                    st.markdown("**Final Prompt Snippet Preview:**")
-                    st.code(debug_info.get("final_prompt_summary", ""))
-
-            # Handle sources for current message
-            if not sources_list and idx == len(messages) - 1:
-                latest = st.session_state.get("latest_sources")
-                if latest and latest.get("session_id") == session_id and latest.get("sources"):
-                    sources_list = latest["sources"]
-
-            if sources_list:
-                st.html("<div class='sources-header-title'>📁 Sources Used</div>")
-                
-                # Remove duplicate sources to prevent clutter
-                unique_sources = []
-                seen_sources = set()
-                for src in sources_list:
-                    src_key = f'{src["document"]}_pg{src.get("page", 1)}'
-                    if src_key not in seen_sources:
-                        seen_sources.add(src_key)
-                        unique_sources.append(src)
-                
-                for s_idx, src in enumerate(unique_sources):
-                    fname = src["document"]
-                    short_fname = fname if len(fname) <= 30 else fname[:12] + "..." + fname[-12:]
-                    page = src.get("page", 1)
-                    
-                    rank = src.get("rank", s_idx + 1)
-                    chunk_id = src.get("chunk_id", "Unknown")
-                    similarity = src.get("similarity", 92)
-                    evidence_strength = src.get("evidence_strength", "Medium")
-                    
-                    # Styled Evidence Strength badge color
-                    badge_color = "#3b82f6" # Blue
-                    if evidence_strength == "High":
-                        badge_color = "#10b981" # Green
-                    elif evidence_strength == "Low":
-                        badge_color = "#ef4444" # Red
-                    
-                    # If preview with highlighted sentences is available from backend, use it
-                    if src.get("preview"):
-                        highlighted_preview = src["preview"]
-                    else:
-                        content_preview = src.get("content", "No context preview available.")
-                        q_term = debug_info.get("query_rewrite") if debug_info else ""
-                        highlighted_preview = highlight_search_terms(content_preview[:300] + ("..." if len(content_preview) > 300 else ""), q_term)
-                    
-                    with st.expander(f"[{rank}] 📄 {short_fname} — Page {page}"):
-                        preview_html = f'''
-                        <div class="source-card-preview" style="padding-top: 8px;">
-                            <div class="source-meta-row" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
-                                <span style="background-color: {badge_color}; color: white; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 10px; text-transform: uppercase;">Evidence Strength: {evidence_strength}</span>
-                                <span style="opacity:0.8;">Similarity: {similarity}% | Rank: #{rank}</span>
-                            </div>
-                            <div style="font-size: 10.5px; opacity: 0.6; margin-bottom: 12px; font-family: monospace;">Chunk ID: {chunk_id}</div>
-                            <div class="source-quote" style="font-size: 13.5px; line-height: 1.6; border-left: 3px solid var(--accent); padding-left: 12px; margin-bottom: 12px; opacity:0.9;">
-                                {highlighted_preview}
-                            </div>
-                        </div>
-                        '''
-                        st.html(preview_html)
-                        
-                        # Secure direct download button instead of a broken static link
-                        try:
-                            with open(UPLOAD_FOLDER / fname, "rb") as pdf_file:
-                                pdf_data = pdf_file.read()
-                            st.download_button(
-                                label="📥 Open / Download Full PDF",
-                                data=pdf_data,
-                                file_name=fname,
-                                mime="application/pdf",
-                                key=f"dl_{fname}_{idx}_{s_idx}",
-                                use_container_width=False
+                        from app.database import get_connection
+                        conn = get_connection()
+                        cursor = conn.cursor()
+                        cursor.execute("""
+                            UPDATE chat_messages
+                            SET title = ?
+                            WHERE session_id = ? AND id = (
+                                SELECT MIN(id) FROM chat_messages WHERE session_id = ?
                             )
+                        """, (new_title.strip(), session_id, session_id))
+                        conn.commit()
+                        conn.close()
+                    except Exception:
+                        pass
+                st.session_state.show_rename = False
+                st.rerun(scope="app")
+            if col_cancel.button("Cancel"):
+                st.session_state.show_rename = False
+                st.rerun(scope="app")
+
+        st.html('<div class="chat-container">')
+
+        # Auto-scroll JS
+        auto_scroll_js = '''
+        <script>
+        (function() {
+            const tryScroll = () => {
+                const mainEl = window.parent.document.querySelector('[data-testid="stMainBlockContainer"]');
+                if (mainEl) { mainEl.scrollTop = mainEl.scrollHeight; }
+                window.parent.scrollTo(0, window.parent.document.body.scrollHeight);
+            };
+            setTimeout(tryScroll, 200);
+            setTimeout(tryScroll, 600);
+        })();
+        </script>
+        '''
+        st.html(auto_scroll_js)
+
+        for idx, msg in enumerate(messages):
+            role = msg["role"]
+            content = msg["content"]
+
+            if role.lower() == "user":
+                user_msg_html = f'<div class="user-msg-bubble"><strong>You:</strong><br>{content}</div>'
+                st.html(user_msg_html)
+            else:
+                import json
+                sources_list = []
+                debug_info = None
+
+                if "||CITATIONS||" in content:
+                    parts = content.split("||CITATIONS||", 1)
+                    clean_content = parts[0]
+                    
+                    citations_and_debug = parts[1]
+                    if "||DEBUG||" in citations_and_debug:
+                        sub_parts = citations_and_debug.split("||DEBUG||", 1)
+                        citations_str = sub_parts[0]
+                        debug_str = sub_parts[1]
+                        try:
+                            sources_list = json.loads(citations_str)
                         except Exception:
-                            st.error("Unable to open full PDF document.")
+                            sources_list = []
+                        try:
+                            debug_info = json.loads(debug_str)
+                        except Exception:
+                            debug_info = None
+                    else:
+                        try:
+                            sources_list = json.loads(citations_and_debug)
+                        except Exception:
+                            sources_list = []
+                else:
+                    clean_content = content
 
-    st.html('</div>') # end of chat-container
+                body_html = render_assistant_response(clean_content)
+                safe_text = _safe(clean_content)
 
-    if st.session_state.get("pending_query"):
-        pending_q = st.session_state.pending_query
-        user_msg_html = f'<div class="user-msg-bubble"><strong>You:</strong><br>{pending_q}</div>'
-        st.html(user_msg_html)
-
-        typing_placeholder = st.empty()
-        typing_placeholder.html(
-            '''
-            <div class="ai-response-card">
-                <div class="ai-response-header">
-                    <div class="ai-avatar">DM</div>
-                    <div class="ai-meta">
-                        <div class="ai-title">DocuMind AI <span class="ai-verified-tag" style="background: var(--accent-light); color: var(--accent);">Thinking...</span></div>
-                        <div class="ai-subtitle">Searching documents & formulating response...</div>
+                ai_card_html = f'''
+                <div class="ai-response-card">
+                    <textarea class="copy-textarea" style="display:none;">{safe_text}</textarea>
+                    <div class="ai-response-header">
+                        <div class="ai-avatar">DM</div>
+                        <div class="ai-meta">
+                            <div class="ai-title">DocuMind AI <span class="ai-verified-tag">Grounding Active</span></div>
+                        </div>
+                        <div class="ai-actions">
+                            <button class="ai-action-btn copy-btn" onclick="navigator.clipboard.writeText(this.closest('.ai-response-card').querySelector('.copy-textarea').value); showCopyToast();" title="Copy response">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H5.25m11.9-3.664A2.251 2.251 0 0 0 15 2.25h-3a2.251 2.251 0 0 0-2.15 1.586m5.8 0c.065.21.1.433.1.664v.75h-6V4.5c0-.231.035-.454.1-.664M6.75 7.375c0-.621.504-1.125 1.125-1.125h9.75c.621 0 1.125.504 1.125 1.125v12.75c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.375Z" /></svg>
+                            </button>
+                            <button class="ai-action-btn like-btn" onclick="this.classList.toggle('active')" title="Like response">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 0 1 2.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 0 0 .322-1.672V2.75a.75.75 0 0 1 .75-.75 2.25 2.25 0 0 1 2.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282m0 0h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 0 1-2.849 7.73c-.378.468-1.01.442-1.393.062L16.89 13.71c-.26-.26-.606-.41-.968-.41H9.513M9.513 13.15c0 .323-.1.644-.287.915l-1.413 2.12c-.229.344-.616.555-1.034.555H4.144a.75.75 0 0 1-.75-.75v-6.307c0-.312.18-.598.463-.728l3.693-1.684a.75.75 0 0 1 1.011.683v2.166Z" /></svg>
+                            </button>
+                            <button class="ai-action-btn dislike-btn" onclick="this.classList.toggle('active')" title="Dislike response">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 16px; height: 16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M7.367 13.75c-.806 0-1.533.446-2.031 1.08a9.041 9.041 0 0 1-2.861 2.4c-.723.384-1.35.956-1.653 1.715a4.498 4.498 0 0 0-.322 1.672v.679c0 .414.336.75.75.75a2.25 2.25 0 0 0 2.25-2.25c0-1.152.26-2.243.723-3.218.266-.558-.107-1.282-.725-1.282m0 0h-3.126c-1.026 0-1.945-.694-2.054-1.715a12.137 12.137 0 0 1-.068-1.285 11.95 11.95 0 0 1 2.849-7.73c.378-.468 1.01-.442 1.393-.062L7.11 10.29c.26.26.606.41.968.41h6.409m0-1.15c0-.323.1-.644.287-.915l1.413-2.12c.229-.344.616-.555 1.034-.555h2.006c.414 0 .75.336.75.75v6.307c0 .312-.18.598-.463.728l-3.693 1.684a.75.75 0 0 1-1.011-.683V10.29Z" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ai-response-body">
+                        {body_html}
                     </div>
                 </div>
-                <div class="ai-response-body" style="display: flex; align-items: center; gap: 8px;">
-                    <div class="typing-indicator"><span></span><span></span><span></span></div>
-                    <span style="font-size: 12px; color: var(--text-secondary);">DocuMind is thinking...</span>
-                </div>
-            </div>
-            '''
-        )
+                '''
+                st.html(ai_card_html)
 
-        res = ask_question(
-            session_id=session_id,
-            question=pending_q,
-            document=st.session_state.active_document,
-        )
+                # Rerender developer information if Developer Mode is active
+                if st.session_state.get("developer_mode") and debug_info:
+                    with st.expander("🛠️ Developer Debug Panel", expanded=False):
+                        st.html(f'''
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; font-size:12px; margin-bottom:12px; border-bottom:1px solid rgba(128,128,128,0.1); padding-bottom:10px;">
+                            <div><strong>Intent:</strong> <span style="color:#3b82f6;">{debug_info.get("intent", "Unknown")}</span></div>
+                            <div><strong>Topic Pipeline:</strong> {debug_info.get("topic_before", "None")} ➔ <span style="color:#10b981;">{debug_info.get("topic_after", "None")}</span></div>
+                            <div><strong>Selected Document:</strong> {debug_info.get("selected_document", "All")}</div>
+                            <div><strong>Subject Domain:</strong> {debug_info.get("selected_chapter", "General")}</div>
+                            <div><strong>Rewritten Query:</strong> <em>"{debug_info.get("query_rewrite", "None")}"</em></div>
+                            <div><strong>Pipeline Latency:</strong> <span style="color:#eab308;">{debug_info.get("latency", 0)} ms</span></div>
+                        </div>
+                        
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; font-size:12px; margin-bottom:12px; border-bottom:1px solid rgba(128,128,128,0.1); padding-bottom:10px;">
+                            <div><strong>Routing Reason:</strong> {debug_info.get("reason_for_document_selection", "None")}</div>
+                            <div><strong>Topic Switch Reason:</strong> {debug_info.get("reason_for_topic_switch", "None")}</div>
+                            <div><strong>Rejection Log:</strong> {debug_info.get("reason_for_retrieval_rejection", "None")}</div>
+                        </div>
+                        
+                        <div style="font-size:12px; font-weight:600; margin-bottom:6px;">Ranked Candidate Chunks & Similarity Metrics:</div>
+                        ''')
+                        
+                        for chunk in debug_info.get("retrieved_chunks", []):
+                            cid = chunk.get("id", "Unknown")
+                            score = chunk.get("score", 0.0)
+                            doc_name = chunk.get("document", "Unknown")
+                            page = chunk.get("page", "Unknown")
+                            text_preview = chunk.get("chunk_text", "")
+                            
+                            st.html(f'''
+                            <div style="font-size:11px; margin-top:8px; border-top:1px solid rgba(128,128,128,0.1); padding-top:6px; margin-bottom:4px;">
+                                <strong>ID:</strong> {cid} | <strong>Doc:</strong> {doc_name} (Page {page})<br>
+                                <strong>Scores:</strong> Semantic: {chunk.get("semantic_score", 0.0)} | Keywords: {chunk.get("keyword_score", 0.0)} | MMR Score: {chunk.get("mmr_score", 0.0)} | <strong>Final Hybrid Score:</strong> <span style="color:#3b82f6;">{score}</span>
+                            </div>
+                            ''')
+                            st.text(text_preview[:400] + ("..." if len(text_preview) > 400 else ""))
+                            
+                        st.markdown("**Final Prompt Snippet Preview:**")
+                        st.code(debug_info.get("final_prompt_summary", ""))
 
-        typing_placeholder.empty()
+                # Handle sources for current message
+                if not sources_list and idx == len(messages) - 1:
+                    latest = st.session_state.get("latest_sources")
+                    if latest and latest.get("session_id") == session_id and latest.get("sources"):
+                        sources_list = latest["sources"]
 
-        if res.get("success"):
-            res_data = res.get("data", {}) if "data" in res else res
-            st.session_state.latest_sources = {
-                "session_id": session_id,
-                "sources": res_data.get("sources", []),
-                "confidence": res_data.get("confidence", 95),
-            }
-        else:
-            res_data = res.get("data", {}) if "data" in res else res
-            st.error(res_data.get("answer") or res.get("answer") or res.get("detail") or "Failed to generate response.")
+                if sources_list:
+                    st.html("<div class='sources-header-title'>📁 Sources Used</div>")
+                    
+                    unique_sources = []
+                    seen_sources = set()
+                    for src in sources_list:
+                        src_key = f'{src["document"]}_pg{src.get("page", 1)}'
+                        if src_key not in seen_sources:
+                            seen_sources.add(src_key)
+                            unique_sources.append(src)
+                    
+                    for s_idx, src in enumerate(unique_sources):
+                        fname = src["document"]
+                        short_fname = fname if len(fname) <= 30 else fname[:12] + "..." + fname[-12:]
+                        page = src.get("page", 1)
+                        
+                        rank = src.get("rank", s_idx + 1)
+                        chunk_id = src.get("chunk_id", "Unknown")
+                        similarity = src.get("similarity", 92)
+                        evidence_strength = src.get("evidence_strength", "Medium")
+                        
+                        badge_color = "#3b82f6" 
+                        if evidence_strength == "High":
+                            badge_color = "#10b981"
+                        elif evidence_strength == "Low":
+                            badge_color = "#ef4444"
+                        
+                        if src.get("preview"):
+                            highlighted_preview = src["preview"]
+                        else:
+                            content_preview = src.get("content", "No context preview available.")
+                            q_term = debug_info.get("query_rewrite") if debug_info else ""
+                            highlighted_preview = highlight_search_terms(content_preview[:300] + ("..." if len(content_preview) > 300 else ""), q_term)
+                        
+                        with st.expander(f"[{rank}] 📄 {short_fname} — Page {page}"):
+                            preview_html = f'''
+                            <div class="source-card-preview" style="padding-top: 8px;">
+                                <div class="source-meta-row" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                                    <span style="background-color: {badge_color}; color: white; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 10px; text-transform: uppercase;">Evidence Strength: {evidence_strength}</span>
+                                    <span style="opacity:0.8;">Similarity: {similarity}% | Rank: #{rank}</span>
+                                </div>
+                                <div style="font-size: 10.5px; opacity: 0.6; margin-bottom: 12px; font-family: monospace;">Chunk ID: {chunk_id}</div>
+                                <div class="source-quote" style="font-size: 13.5px; line-height: 1.6; border-left: 3px solid var(--accent); padding-left: 12px; margin-bottom: 12px; opacity:0.9;">
+                                    {highlighted_preview}
+                                </div>
+                            </div>
+                            '''
+                            st.html(preview_html)
+                            
+                            try:
+                                with open(UPLOAD_FOLDER / fname, "rb") as pdf_file:
+                                    pdf_data = pdf_file.read()
+                                st.download_button(
+                                    label="📥 Open / Download Full PDF",
+                                    data=pdf_data,
+                                    file_name=fname,
+                                    mime="application/pdf",
+                                    key=f"dl_{fname}_{idx}_{s_idx}",
+                                    use_container_width=False
+                                )
+                            except Exception:
+                                st.error("Unable to open full PDF document.")
 
-        st.session_state.pending_query = None
-        st.rerun()
+        st.html('</div>') # end of chat-container
 
-    query = st.chat_input(
-        "Ask anything about your uploaded documents...",
-        key="chat_page",
-    )
-    if query:
-        opt_html = f'<div class="user-msg-bubble"><strong>You:</strong><br>{query}</div>'
-        st.html(opt_html)
+        if st.session_state.get("pending_query"):
+            pending_q = st.session_state.pending_query
+            user_msg_html = f'<div class="user-msg-bubble"><strong>You:</strong><br>{pending_q}</div>'
+            st.html(user_msg_html)
 
-        typing_placeholder = st.empty()
-        typing_placeholder.html(
-            '''
-            <div class="ai-response-card">
-                <div class="ai-response-header">
-                    <div class="ai-avatar">DM</div>
-                    <div class="ai-meta">
-                        <div class="ai-title">DocuMind AI <span class="ai-verified-tag" style="background: var(--accent-light); color: var(--accent);">Thinking...</span></div>
-                        <div class="ai-subtitle">Searching documents & formulating response...</div>
+            typing_placeholder = st.empty()
+            typing_placeholder.html(
+                '''
+                <div class="ai-response-card">
+                    <div class="ai-response-header">
+                        <div class="ai-avatar">DM</div>
+                        <div class="ai-meta">
+                            <div class="ai-title">DocuMind AI <span class="ai-verified-tag" style="background: var(--accent-light); color: var(--accent);">Thinking...</span></div>
+                            <div class="ai-subtitle">Searching documents & formulating response...</div>
+                        </div>
+                    </div>
+                    <div class="ai-response-body" style="display: flex; align-items: center; gap: 8px;">
+                        <div class="typing-indicator"><span></span><span></span><span></span></div>
+                        <span style="font-size: 12px; color: var(--text-secondary);">DocuMind is thinking...</span>
                     </div>
                 </div>
-                <div class="ai-response-body" style="display: flex; align-items: center; gap: 8px;">
-                    <div class="typing-indicator"><span></span><span></span><span></span></div>
-                    <span style="font-size: 12px; color: var(--text-secondary);">DocuMind is thinking...</span>
+                '''
+            )
+
+            res = ask_question(
+                session_id=session_id,
+                question=pending_q,
+                document=st.session_state.active_document,
+            )
+
+            typing_placeholder.empty()
+
+            if res.get("success"):
+                res_data = res.get("data", {}) if "data" in res else res
+                st.session_state.latest_sources = {
+                    "session_id": session_id,
+                    "sources": res_data.get("sources", []),
+                    "confidence": res_data.get("confidence", 95),
+                }
+            else:
+                res_data = res.get("data", {}) if "data" in res else res
+                st.error(res_data.get("answer") or res.get("answer") or res.get("detail") or "Failed to generate response.")
+
+            st.session_state.pending_query = None
+            st.rerun(scope="app")
+
+        query = st.chat_input(
+            "Ask anything about your uploaded documents...",
+            key="chat_page",
+        )
+        if query:
+            opt_html = f'<div class="user-msg-bubble"><strong>You:</strong><br>{query}</div>'
+            st.html(opt_html)
+
+            typing_placeholder = st.empty()
+            typing_placeholder.html(
+                '''
+                <div class="ai-response-card">
+                    <div class="ai-response-header">
+                        <div class="ai-avatar">DM</div>
+                        <div class="ai-meta">
+                            <div class="ai-title">DocuMind AI <span class="ai-verified-tag" style="background: var(--accent-light); color: var(--accent);">Thinking...</span></div>
+                            <div class="ai-subtitle">Searching documents & formulating response...</div>
+                        </div>
+                    </div>
+                    <div class="ai-response-body" style="display: flex; align-items: center; gap: 8px;">
+                        <div class="typing-indicator"><span></span><span></span><span></span></div>
+                        <span style="font-size: 12px; color: var(--text-secondary);">DocuMind is thinking...</span>
+                    </div>
                 </div>
-            </div>
-            '''
-        )
+                '''
+            )
 
-        res = ask_question(
-            session_id=session_id,
-            question=query,
-            document=st.session_state.active_document,
-        )
+            res = ask_question(
+                session_id=session_id,
+                question=query,
+                document=st.session_state.active_document,
+            )
 
-        typing_placeholder.empty()
+            typing_placeholder.empty()
 
-        if res.get("success"):
-            res_data = res.get("data", {}) if "data" in res else res
-            st.session_state.latest_sources = {
-                "session_id": session_id,
-                "sources": res_data.get("sources", []),
-                "confidence": res_data.get("confidence", 95),
-            }
-            st.rerun()
-        else:
-            res_data = res.get("data", {}) if "data" in res else res
-            st.error(res_data.get("answer") or res.get("answer") or res.get("detail") or "Failed to generate response.")
+            if res.get("success"):
+                res_data = res.get("data", {}) if "data" in res else res
+                st.session_state.latest_sources = {
+                    "session_id": session_id,
+                    "sources": res_data.get("sources", []),
+                    "confidence": res_data.get("confidence", 95),
+                }
+                st.rerun()
+            else:
+                res_data = res.get("data", {}) if "data" in res else res
+                st.error(res_data.get("answer") or res.get("answer") or res.get("detail") or "Failed to generate response.")
+
+    render_chat_fragment(st.session_state.session_id, chats)
 
     st.html('<div class="footer-note">AI responses are grounded using your uploaded documents.</div>')
