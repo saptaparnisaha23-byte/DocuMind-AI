@@ -44,6 +44,7 @@ from frontend.api import (
     upload_documents,
     ask_question,
     delete_chat,
+    delete_document_api,
     BASE_URL,
     STANDALONE_MODE,
 )
@@ -319,12 +320,11 @@ if "view_details_doc" in query_params:
 # Action handling from query parameters
 if "delete_doc" in query_params:
     doc_to_delete = query_params["delete_doc"]
-    try:
-        delete_res = requests.delete(f"{BASE_URL}/documents/{doc_to_delete}").json()
-        if delete_res.get("success"):
-            st.toast(f"🗑️ Deleted document {doc_to_delete}")
-    except Exception as e:
-        st.toast(f"Failed to delete document: {e}")
+    delete_res = delete_document_api(doc_to_delete)
+    if delete_res.get("success"):
+        st.toast(f"🗑️ Deleted document {doc_to_delete}")
+    else:
+        st.toast(f"Failed to delete document: {delete_res.get('detail', 'Unknown error')}")
     # clear params and reload
     current_theme = st.session_state.theme
     st.query_params.clear()
@@ -640,21 +640,32 @@ if st.session_state.get("renaming_doc"):
                     import shutil
                     # Copy to new name
                     shutil.copy(old_path, new_path)
-                    # Upload renamed file contents to sync vector database
-                    with open(new_path, "rb") as f:
-                        upload_res = requests.post(
-                            f"{BASE_URL}/upload",
-                            files=[("files", (new_doc_name, f, "application/pdf"))]
-                        ).json()
-                    
-                    if upload_res.get("success"):
-                        # Delete original file
-                        requests.delete(f"{BASE_URL}/documents/{old_doc}")
-                        st.toast("📄 Document renamed and re-indexed successfully!")
+                    if STANDALONE_MODE:
+                        from app.ingest import ingest_pdf
+                        ingest_res = ingest_pdf(new_path)
+                        if ingest_res.get("filename"):
+                            delete_document_api(old_doc)
+                            st.toast("📄 Document renamed and re-indexed successfully!")
+                        else:
+                            st.error("Rename ingestion failed.")
+                            if new_path.exists():
+                                new_path.unlink()
                     else:
-                        st.error(upload_res.get("detail", "Rename upload failed."))
-                        if new_path.exists():
-                            new_path.unlink()
+                        # Upload renamed file contents to sync vector database
+                        with open(new_path, "rb") as f:
+                            upload_res = requests.post(
+                                f"{BASE_URL}/upload",
+                                files=[("files", (new_doc_name, f, "application/pdf"))]
+                            ).json()
+                        
+                        if upload_res.get("success"):
+                            # Delete original file
+                            delete_document_api(old_doc)
+                            st.toast("📄 Document renamed and re-indexed successfully!")
+                        else:
+                            st.error(upload_res.get("detail", "Rename upload failed."))
+                            if new_path.exists():
+                                new_path.unlink()
                 except Exception as e:
                     st.error(f"Error during renaming: {e}")
             else:
@@ -754,15 +765,12 @@ elif st.session_state.page == "upload":
             col1.write(f"📄 **{doc}**")
             if col2.button("🗑️", key=f"del_{doc}"):
                 with st.spinner(f"Deleting {doc}..."):
-                    try:
-                        delete_res = requests.delete(f"{BASE_URL}/documents/{doc}").json()
-                        if delete_res.get("success"):
-                            st.success(f"Deleted {doc}")
-                            st.rerun()
-                        else:
-                            st.error(delete_res.get("detail", f"Failed to delete {doc}."))
-                    except Exception as e:
-                        st.error(f"Error: {e}")
+                    delete_res = delete_document_api(doc)
+                    if delete_res.get("success"):
+                        st.success(f"Deleted {doc}")
+                        st.rerun()
+                    else:
+                        st.error(delete_res.get("detail", f"Failed to delete {doc}."))
     else:
         st.info("No documents uploaded yet.")
 

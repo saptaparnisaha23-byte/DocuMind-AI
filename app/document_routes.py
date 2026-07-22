@@ -7,6 +7,7 @@ from pydantic import WithJsonSchema
 
 from app.ingest import ingest_pdf
 from app.embed import delete_document
+from app.database import delete_document_metadata
 
 router = APIRouter(
     prefix="",
@@ -96,6 +97,9 @@ def delete_document_route(filename: str):
 
     # Delete embeddings from ChromaDB
     delete_document(filename)
+
+    # Delete document metadata from SQLite
+    delete_document_metadata(filename)
 
     return {
         "success": True,

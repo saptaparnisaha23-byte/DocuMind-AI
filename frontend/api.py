@@ -146,3 +146,25 @@ def delete_chat(session_id):
         ).json()
     except Exception as e:
         return {"success": False, "detail": str(e)}
+
+def delete_document_api(filename):
+    if STANDALONE_MODE:
+        try:
+            UPLOAD_FOLDER = Path("uploads")
+            file_path = UPLOAD_FOLDER / filename
+            if file_path.exists():
+                file_path.unlink()
+            from app.embed import delete_document as delete_embeddings
+            delete_embeddings(filename)
+            from app.database import delete_document_metadata
+            delete_document_metadata(filename)
+            return {"success": True, "message": f"{filename} deleted successfully."}
+        except Exception as e:
+            return {"success": False, "detail": str(e)}
+    else:
+        try:
+            return requests.delete(
+                f"{BASE_URL}/documents/{filename}"
+            ).json()
+        except Exception as e:
+            return {"success": False, "detail": f"Connection error: {e}"}
