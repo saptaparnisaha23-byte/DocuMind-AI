@@ -960,13 +960,19 @@ elif st.session_state.page == "chat":
                             st.markdown("**Final Prompt Snippet Preview:**")
                             st.code(debug_info.get("final_prompt_summary", ""))
 
+                    # Refusal answer check to prevent rendering stale sources
+                    is_refusal = "This topic was not found" in clean_content or "To ensure factual accuracy" in clean_content
+                    if is_refusal:
+                        sources_list = []
+                        st.session_state.latest_sources = {"session_id": session_id, "sources": [], "confidence": 0}
+
                     # Handle sources for current message
-                    if not sources_list and idx == len(messages) - 1:
+                    if not sources_list and not is_refusal and idx == len(messages) - 1:
                         latest = st.session_state.get("latest_sources")
                         if latest and latest.get("session_id") == session_id and latest.get("sources"):
                             sources_list = latest["sources"]
 
-                    if sources_list:
+                    if sources_list and not is_refusal:
                         st.html("<div class='sources-header-title'>📁 Sources Used</div>")
 
                         # Remove duplicate sources to prevent clutter

@@ -1039,6 +1039,44 @@ def ask_question(session_id, question, document=None):
             # Merge contiguous adjacent chunks on same page
             selected_candidates = merge_adjacent_chunks(top_ranked)
 
+        # Summary and Document Task Detection
+        low_q = question.lower()
+        summary_keywords = {"summarize", "summary", "overview", "synopsis", "key takeaways", "outline", "notes", "brief"}
+        is_summary_request = query_type in ("summary", "notes") or intent == "Document Task" or any(w in low_q for w in summary_keywords)
+        
+        # If user asks to summarize a specific document or active document, ensure we fetch candidate chunks directly
+        if is_summary_request or document:
+            target_doc = document
+            if not target_doc:
+                matched = identify_mentioned_documents(question, documents_list)
+                if matched:
+                    target_doc = matched[0]
+                    
+            current_max = max([x["score"] for x in selected_candidates]) if selected_candidates else 0.0
+            if not selected_candidates or current_max < 0.25:
+                try:
+                    where_clause = {"document": target_doc} if target_doc else None
+                    db_res = collection.get(where=where_clause, limit=12) if where_clause else collection.get(limit=12)
+                    doc_texts = db_res.get("documents", [])
+                    doc_metas = db_res.get("metadatas", [])
+                    if doc_texts:
+                        fallback_cands = []
+                        for idx, text in enumerate(doc_texts[:8]):
+                            meta = doc_metas[idx] if idx < len(doc_metas) else {}
+                            fallback_cands.append({
+                                "doc": text,
+                                "meta": meta,
+                                "score": 0.85,
+                                "semantic_score": 0.85,
+                                "keyword_score": 0.85,
+                                "doc_boost": 0.25,
+                                "topic_boost": 0.0,
+                                "mmr_score": 0.85
+                            })
+                        selected_candidates = merge_adjacent_chunks(fallback_cands[:6])
+                except Exception:
+                    pass
+
         # Early out-of-scope validation
         out_of_scope = False
         is_conv = is_conversational(question)
@@ -1047,8 +1085,10 @@ def ask_question(session_id, question, document=None):
         if not is_conv and max_final_score < 0.25 and not is_example_request:
             out_of_scope = True
             
-        if len(comparison_docs) >= 2:
-            out_of_scope = False
+        if len(comparison_docs) >= 2 or is_summary_request or document:
+            if selected_candidates:
+                out_of_scope = False
+
             
         if out_of_scope:
             title = question if len(history) == 0 else None
