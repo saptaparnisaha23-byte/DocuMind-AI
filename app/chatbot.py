@@ -104,20 +104,41 @@ def triage_user_query(history, question, documents_list):
         return data
     except Exception as e:
         print(f"DEBUG - Triage failed: {e}")
+        
+        # Rule-based conversational query rewriting fallback
+        rewritten = question
+        prev_topic = None
+        if history:
+            for prev_msg in reversed(history[-4:]):
+                content = prev_msg.get("content", "")
+                if "||CITATIONS||" in content:
+                    content = content.split("||CITATIONS||")[0]
+                # Look for course codes or topic terms in past messages
+                found_codes = re.findall(r'\b[a-zA-Z]{2,4}\d{3,4}\b', content)
+                if found_codes:
+                    prev_topic = " and ".join(list(set(found_codes)))
+                    break
+                    
+        low_q = question.lower()
+        follow_up_triggers = {"this", "these", "it", "them", "two", "changed", "difference", "compare", "more", "explain"}
+        if prev_topic and any(w in low_q for w in follow_up_triggers):
+            rewritten = f"{question} regarding {prev_topic}"
+
         return {
-            "intent": "New Topic",
-            "query_type": "general",
-            "active_topic": question,
+            "intent": "Follow-up" if prev_topic else "New Topic",
+            "query_type": "comparison" if "difference" in low_q or "changed" in low_q or "compare" in low_q else "general",
+            "active_topic": prev_topic or question,
             "active_subject": "General",
-            "rewritten_query": question,
+            "rewritten_query": rewritten,
             "target_pdf_hint": None,
-            "reason_for_topic_switch": "Fallback due to parser error",
+            "reason_for_topic_switch": "Fallback rule-based rewriting",
             "reason_for_document_selection": "Fallback"
         }
 
+
 def compute_keyword_score(query, text):
-    stopwords = {"what", "is", "explain", "why", "how", "the", "a", "an", "and", "or", "in", "on", "at", "to", "for", "with", "about", "of", "it", "this", "that"}
-    query_tokens = set(re.findall(r'\b\w{3,}\b', query.lower())) - stopwords
+    stopwords = {"what", "is", "explain", "why", "how", "the", "a", "an", "and", "or", "in", "on", "at", "to", "for", "with", "about", "of", "it", "this", "that", "does", "do", "did", "can"}
+    query_tokens = set(re.findall(r'\b\w{2,}\b', query.lower())) - stopwords
     if not query_tokens:
         return 0.0
     text_lower = text.lower()
@@ -130,13 +151,33 @@ def compute_keyword_score(query, text):
         "rmse": ["root", "mean", "squared", "error"],
         "mae": ["mean", "absolute", "error"],
         "rss": ["residual", "sum", "squares"],
+        "vif": ["variance", "inflation", "factor"],
+        "r2": ["r", "squared", "coefficient"],
+        "anova": ["analysis", "of", "variance"],
+        "pca": ["principal", "component", "analysis"],
+        "knn": ["k", "nearest", "neighbors"],
+        "svm": ["support", "vector", "machine"],
+        "gd": ["gradient", "descent"],
+        "sgd": ["stochastic", "gradient", "descent"],
     }
+
+    expanded_query_tokens = set(query_tokens)
+    for acronym, full_forms in ACRONYMS.items():
+        if acronym in query_tokens:
+            expanded_query_tokens.update(full_forms)
+        if any(ff in query_tokens for ff in full_forms):
+            expanded_query_tokens.add(acronym)
+
+    expanded_text_lower = text_lower
     for acronym, full_forms in ACRONYMS.items():
         if acronym in text_lower:
-            text_lower += " " + " ".join(full_forms)
-            
-    matches = sum(1 for token in query_tokens if token in text_lower)
-    return matches / len(query_tokens)
+            expanded_text_lower += " " + " ".join(full_forms)
+        if any(ff in text_lower for ff in full_forms):
+            expanded_text_lower += " " + acronym
+
+    matches = sum(1 for token in expanded_query_tokens if token in expanded_text_lower)
+    return matches / len(expanded_query_tokens)
+
 
 def is_noisy_chunk(text):
     text_clean = text.strip()
