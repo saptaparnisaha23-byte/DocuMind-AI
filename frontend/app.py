@@ -40,6 +40,7 @@ from frontend.api import (
     ask_question,
     delete_chat,
     BASE_URL,
+    STANDALONE_MODE,
 )
 
 def escape_js_string(text):
@@ -461,19 +462,8 @@ if st.session_state.get("chat_uploader"):
         except Exception as e:
             st.error(f"Upload failed: {e}")
 
-# Helper to check if backend is running
-def is_backend_running():
-    try:
-        response = requests.get(f"{BASE_URL}/health", timeout=1)
-        return response.status_code == 200
-    except Exception:
-        return False
-
-# Ensure backend API is active
-if not is_backend_running():
-    st.error(f"🔌 Connection Refused: Backend API is not running on {BASE_URL}.")
-    st.info("Please start the FastAPI backend server first.")
-    st.stop()
+# Standalone Mode status flag
+is_active = not STANDALONE_MODE
 
 # Fetch Dynamic Data
 try:
