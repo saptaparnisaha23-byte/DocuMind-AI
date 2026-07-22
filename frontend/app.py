@@ -8,7 +8,7 @@ import html
 from urllib.parse import quote, unquote
 
 # Make sure project root is in python path
-sys.path.append(str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # Initialize local SQLite database schema for standalone deployments
 from app.database import initialize_database
