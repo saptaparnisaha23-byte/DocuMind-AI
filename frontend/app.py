@@ -39,6 +39,7 @@ from frontend.api import (
     upload_documents,
     ask_question,
     delete_chat,
+    BASE_URL,
 )
 
 def escape_js_string(text):
@@ -313,7 +314,7 @@ if "view_details_doc" in query_params:
 if "delete_doc" in query_params:
     doc_to_delete = query_params["delete_doc"]
     try:
-        delete_res = requests.delete(f"http://127.0.0.1:8000/documents/{doc_to_delete}").json()
+        delete_res = requests.delete(f"{BASE_URL}/documents/{doc_to_delete}").json()
         if delete_res.get("success"):
             st.toast(f"🗑️ Deleted document {doc_to_delete}")
     except Exception as e:
@@ -463,14 +464,14 @@ if st.session_state.get("chat_uploader"):
 # Helper to check if backend is running
 def is_backend_running():
     try:
-        response = requests.get("http://127.0.0.1:8000/health", timeout=1)
+        response = requests.get(f"{BASE_URL}/health", timeout=1)
         return response.status_code == 200
     except Exception:
         return False
 
 # Ensure backend API is active
 if not is_backend_running():
-    st.error("🔌 Connection Refused: Backend API is not running on http://127.0.0.1:8000.")
+    st.error(f"🔌 Connection Refused: Backend API is not running on {BASE_URL}.")
     st.info("Please start the FastAPI backend server first.")
     st.stop()
 
@@ -635,13 +636,13 @@ if st.session_state.get("renaming_doc"):
                     # Upload renamed file contents to sync vector database
                     with open(new_path, "rb") as f:
                         upload_res = requests.post(
-                            "http://127.0.0.1:8000/upload",
+                            f"{BASE_URL}/upload",
                             files=[("files", (new_doc_name, f, "application/pdf"))]
                         ).json()
                     
                     if upload_res.get("success"):
                         # Delete original file
-                        requests.delete(f"http://127.0.0.1:8000/documents/{old_doc}")
+                        requests.delete(f"{BASE_URL}/documents/{old_doc}")
                         st.toast("📄 Document renamed and re-indexed successfully!")
                     else:
                         st.error(upload_res.get("detail", "Rename upload failed."))
@@ -747,7 +748,7 @@ elif st.session_state.page == "upload":
             if col2.button("🗑️", key=f"del_{doc}"):
                 with st.spinner(f"Deleting {doc}..."):
                     try:
-                        delete_res = requests.delete(f"http://127.0.0.1:8000/documents/{doc}").json()
+                        delete_res = requests.delete(f"{BASE_URL}/documents/{doc}").json()
                         if delete_res.get("success"):
                             st.success(f"Deleted {doc}")
                             st.rerun()
