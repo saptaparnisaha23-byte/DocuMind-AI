@@ -1686,3 +1686,16 @@ div:has(.hidden-uploader-trigger) + div {
 .home-inline-submit-btn svg {
     color: #ffffff !important;
 }
+
+/* ==========================================
+   HIDE STREAMLIT DEFAULT HEADER & FOOTER UI
+   ========================================== */
+#MainMenu { visibility: hidden !important; display: none !important; }
+header { visibility: hidden !important; display: none !important; }
+footer { visibility: hidden !important; display: none !important; }
+[data-testid="stHeader"] { display: none !important; }
+[data-testid="stDecoration"] { display: none !important; }
+[data-testid="stStatusWidget"] { display: none !important; }
+[data-testid="manage-app-button"] { display: none !important; }
+.viewerBadge_container__1QSob { display: none !important; }
+div[class*="viewerBadge"] { display: none !important; }
