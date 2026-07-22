@@ -1544,7 +1544,7 @@ div:has(.hidden-uploader-trigger) + div {
    RESPONSIVENESS
    ========================================== */
 
-@media (max-width: 992px) {
+@media (max-width: 768px) {
     [data-testid="stMain"] {
         margin-left: 0 !important;
     }
@@ -1557,20 +1557,13 @@ div:has(.hidden-uploader-trigger) + div {
     .sidebar {
         transform: translateX(-100%);
         transition: transform var(--duration-normal) var(--ease-out);
-        z-index: 999;
+        z-index: 999999 !important;
     }
 
     .sidebar.open {
         transform: translateX(0);
     }
 
-    [data-testid="stMainBlockContainer"] {
-        padding-left: 16px !important;
-        padding-right: 16px !important;
-    }
-}
-
-@media (max-width: 768px) {
     [data-testid="stMainBlockContainer"] {
         max-width: 100% !important;
         padding: 16px 12px 120px 12px !important;
