@@ -1,0 +1,263 @@
+/* ==========================================
+   DARK THEME — PREMIUM DESIGN SYSTEM
+   DocuMind AI v2.0
+   ========================================== */
+
+:root {
+    /* Core Backgrounds */
+    --bg-app: #0a0e14;
+    --bg-sidebar: #0d1117;
+    --bg-card: #151b23;
+    --bg-card-hover: #1c2333;
+    --bg-elevated: #1a2130;
+
+    /* Glassmorphism */
+    --glass-bg: rgba(21, 27, 35, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.06);
+    --glass-blur: 16px;
+
+    /* Borders */
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(255, 255, 255, 0.15);
+    --border-active: rgba(99, 179, 255, 0.3);
+
+    /* Text */
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --text-muted: #484f58;
+    --text-inverse: #0a0e14;
+
+    /* Brand / Accent */
+    --accent: #58a6ff;
+    --accent-hover: #79c0ff;
+    --accent-muted: #1f6feb;
+    --accent-light: rgba(88, 166, 255, 0.1);
+    --accent-glow: rgba(88, 166, 255, 0.25);
+    --gradient-accent: linear-gradient(135deg, #58a6ff 0%, #a371f7 100%);
+    --gradient-accent-subtle: linear-gradient(135deg, rgba(88, 166, 255, 0.12) 0%, rgba(163, 113, 247, 0.08) 100%);
+
+    /* Semantic Colors */
+    --success: #3fb950;
+    --success-light: rgba(63, 185, 80, 0.12);
+    --danger: #f85149;
+    --danger-light: rgba(248, 81, 73, 0.12);
+    --warning: #d29922;
+    --warning-light: rgba(210, 153, 34, 0.12);
+    --info: #58a6ff;
+    --info-light: rgba(88, 166, 255, 0.12);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+    --shadow-glow: 0 0 20px rgba(88, 166, 255, 0.15);
+
+    /* Animation Timing */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 400ms;
+
+    /* Radii */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 20px;
+    --radius-pill: 999px;
+
+    /* Streamlit Native Variable Overrides */
+    --default-background-color: #0a0e14 !important;
+    --background-color: #0a0e14 !important;
+    --secondary-background-color: #0d1117 !important;
+    --text-color: #e6edf3 !important;
+    --primary-color: #58a6ff !important;
+}
+
+html, body, .stApp {
+    background-color: var(--bg-app) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Native Main Area Overrides */
+[data-testid="stMain"],
+[data-testid="stMainBlockContainer"],
+section.main {
+    background-color: var(--bg-app) !important;
+}
+
+/* Force Dark Theme on Native Streamlit Widgets & Inputs */
+div[data-testid="stTextInput"] input,
+div[data-testid="stTextInput"] textarea,
+.stTextInput input,
+.stTextArea textarea {
+    background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+}
+
+/* Focus and Active States */
+div[data-testid="stTextInput"] input:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px var(--accent-light) !important;
+}
+
+div[data-testid="stButton"] button,
+.stButton button {
+    background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    font-weight: 500 !important;
+    transition: all var(--duration-fast) var(--ease-out) !important;
+}
+
+div[data-testid="stButton"] button:hover,
+.stButton button:hover {
+    background-color: var(--bg-card-hover) !important;
+    border-color: var(--border-hover) !important;
+    color: #ffffff !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Primary Button Override */
+div[data-testid="stButton"] button[kind="primary"],
+.stButton button[kind="primary"] {
+    background: var(--gradient-accent) !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+div[data-testid="stButton"] button[kind="primary"]:hover,
+.stButton button[kind="primary"]:hover {
+    opacity: 0.9 !important;
+    box-shadow: var(--shadow-glow) !important;
+}
+
+/* High Contrast Placeholder for Dark Theme */
+div[data-testid="stChatInput"] textarea::placeholder {
+    color: var(--text-secondary) !important;
+    opacity: 0.9 !important;
+}
+
+/* Dark background bottom area */
+[data-testid="stBottom"],
+[data-testid="stBottom"] > div,
+[data-testid="stBottomBlockContainer"] {
+    background-color: transparent !important;
+    background-image: none !important;
+    border-top: none !important;
+    box-shadow: none !important;
+}
+
+/* Scrollbar Theme Styling */
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Streamlit Expander Override */
+details[data-testid="stExpander"] {
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+}
+
+details[data-testid="stExpander"] summary {
+    color: var(--text-primary) !important;
+}
+
+/* File uploader dark override */
+[data-testid="stFileUploader"],
+[data-testid="stFileUploaderDropzone"] {
+    background-color: var(--bg-card) !important;
+    border: 1.5px dashed var(--border-color) !important;
+    border-radius: var(--radius-lg) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-testid="stFileUploaderDropzone"] {
+    padding: 24px 16px !important;
+}
+
+[data-testid="stFileUploader"] label {
+    color: var(--text-secondary) !important;
+}
+
+/* Style the text inside file uploader */
+[data-testid="stFileUploaderDropzone"] div,
+[data-testid="stFileUploaderDropzone"] span {
+    color: var(--text-primary) !important;
+}
+
+[data-testid="stFileUploaderDropzone"] small {
+    color: var(--text-secondary) !important;
+}
+
+/* Style the Browse Files button */
+[data-testid="stFileUploaderDropzone"] button {
+    background-color: var(--bg-sidebar) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    font-weight: 600 !important;
+    padding: 6px 14px !important;
+}
+
+[data-testid="stFileUploaderDropzone"] button:hover {
+    background-color: var(--bg-card-hover) !important;
+    border-color: var(--border-hover) !important;
+}
+
+/* Style the uploaded file list card container and content */
+[data-testid="stUploadedFile"],
+div[data-testid="stUploadedFile"] {
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    color: var(--text-primary) !important;
+    padding: 8px 12px !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+[data-testid="stUploadedFile"] div,
+[data-testid="stUploadedFile"] span,
+[data-testid="stUploadedFile"] p,
+[data-testid="stUploadedFile"] svg {
+    color: var(--text-primary) !important;
+}
+
+[data-testid="stUploadedFile"] button {
+    color: var(--text-primary) !important;
+}
+
+/* Fix text contrast in any files uploaded list */
+div[data-testid="stFileUploader"] + div,
+div[data-testid="stFileUploader"] div {
+    color: var(--text-primary) !important;
+}
+
+/* Spinner override */
+.stSpinner > div {
+    border-top-color: var(--accent) !important;
+}
+
+/* Toast notifications */
+[data-testid="stToast"] {
+    background-color: var(--bg-elevated) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+}

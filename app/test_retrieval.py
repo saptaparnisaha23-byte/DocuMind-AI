@@ -1,16 +1,22 @@
-from retrieve import retrieve_chunks
+from app.retrieve import retrieve_chunks
 
 question = input("Ask a question: ")
 
 results = retrieve_chunks(question)
 
-print("\nTop Matching Chunks\n")
+print("\n========== RETRIEVAL RESULTS ==========\n")
 
-for i, doc in enumerate(results["documents"][0]):
+print(results)
 
-    print("=" * 70)
-    print(f"Result {i+1}")
-    print("=" * 70)
+print("\n=======================================\n")
 
-    print(doc)
-    print()
+if results["documents"][0]:
+
+    for i, doc in enumerate(results["documents"][0], start=1):
+
+        print(f"\nResult {i}")
+        print("-" * 70)
+        print(doc)
+
+else:
+    print("No documents found.")

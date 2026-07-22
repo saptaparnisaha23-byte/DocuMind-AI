@@ -19,3 +19,13 @@ chroma_db/
 
 # Logs
 *.log
+
+# Local SQLite Database
+documind.db
+documind.db-journal
+
+# Uploaded manual PDF files
+uploads/
+
+# Archive files
+*.zip
