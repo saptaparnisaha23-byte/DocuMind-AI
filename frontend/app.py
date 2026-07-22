@@ -233,7 +233,7 @@ if "confirm_delete_doc" in query_params:
         </div>
     </div>
     '''
-    st.markdown(confirm_modal_html, unsafe_allow_html=True)
+    st.html(confirm_modal_html)
     st.stop()
 
 if "view_details_doc" in query_params:
@@ -308,7 +308,7 @@ if "view_details_doc" in query_params:
         </div>
     </div>
     '''
-    st.markdown(details_modal_html, unsafe_allow_html=True)
+    st.html(details_modal_html)
     st.stop()
 
 # Action handling from query parameters
@@ -435,10 +435,10 @@ theme_css_path = styles_dir / f"{st.session_state.theme}.css"
 if theme_css_path.exists():
     css += theme_css_path.read_text(encoding="utf-8") + "\n"
 
-st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+st.html(f"<style>{css}</style>")
 
 # Hidden file uploader to support the chat input attachment button
-st.markdown('<div class="hidden-uploader-trigger"></div>', unsafe_allow_html=True)
+st.html('<div class="hidden-uploader-trigger"></div>')
 st.file_uploader(
     "Upload PDF manuals",
     type=["pdf"],
