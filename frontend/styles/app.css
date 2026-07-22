@@ -90,15 +90,10 @@ section[data-testid="stSidebar"] {
     padding: 24px 28px 140px 28px !important;
 }
 
-/* Fix containing block issues for position: fixed on Streamlit Cloud */
+/* Ensure the parent HTML injection wrapper container does not clip the fixed position sidebar */
 div[data-testid="stHtml"],
-.element-container,
-[data-testid="stVerticalBlock"],
-[data-testid="stMainBlockContainer"],
-[data-testid="stMain"] {
-    transform: none !important;
-    filter: none !important;
-    perspective: none !important;
+.element-container {
+    overflow: visible !important;
 }
 
 .sidebar {
@@ -113,7 +108,7 @@ div[data-testid="stHtml"],
     display: flex;
     flex-direction: column;
     gap: 6px;
-    z-index: 100;
+    z-index: 999999 !important;
     transition: background-color var(--duration-normal) var(--ease-out),
                 border-color var(--duration-normal) var(--ease-out);
     overflow-y: auto;

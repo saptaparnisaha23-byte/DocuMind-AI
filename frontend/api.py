@@ -2,17 +2,20 @@ import os
 import requests
 from pathlib import Path
 
+import streamlit as st
+
 BASE_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000")
 
-def is_backend_active():
+@st.cache_resource(show_spinner=False)
+def check_standalone_cached():
     try:
-        r = requests.get(f"{BASE_URL}/health", timeout=0.8)
-        return r.status_code == 200
+        r = requests.get(f"{BASE_URL}/health", timeout=0.5)
+        return r.status_code != 200
     except Exception:
-        return False
+        return True
 
 # Standalone Standby Mode indicator
-STANDALONE_MODE = not is_backend_active()
+STANDALONE_MODE = check_standalone_cached()
 
 def upload_documents(files):
     if STANDALONE_MODE:
