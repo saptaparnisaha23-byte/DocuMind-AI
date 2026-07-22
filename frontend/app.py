@@ -442,16 +442,16 @@ if theme_css_path.exists():
 
 st.html(f"<style>{css}</style>")
 
-# Pre-load embedding model at startup (after page config & CSS) to prevent first-query latency
-@st.cache_resource(show_spinner="Initializing AI Models...")
-def preload_resources():
-    try:
-        from app.embed import model
-    except Exception:
-        pass
-    return True
-
-preload_resources()
+# Pre-load embedding model in a background thread at startup to prevent lag on first query without blocking initial render
+if "model_preloaded" not in st.session_state:
+    st.session_state.model_preloaded = True
+    import threading
+    def bg_preload():
+        try:
+            from app.embed import model
+        except Exception:
+            pass
+    threading.Thread(target=bg_preload, daemon=True).start()
 
 # Hidden file uploader to support the chat input attachment button
 st.html('<div class="hidden-uploader-trigger"></div>')
