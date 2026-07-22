@@ -14,6 +14,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.database import initialize_database
 initialize_database()
 
+# Pre-load embedding model in the background at startup to prevent lag on first query
+@st.cache_resource(show_spinner=False)
+def preload_resources():
+    try:
+        from app.embed import model
+    except Exception:
+        pass
+    return True
+
+preload_resources()
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 UPLOAD_FOLDER = PROJECT_ROOT / "uploads"
 
