@@ -34,40 +34,64 @@ Reading and locating specific information inside long PDF documents (e.g., techn
 
 The system uses a 5-tier architecture connecting the Streamlit frontend, FastAPI REST gateway, chunking & ingestion pipeline, hybrid HNSW vector + BM25 keyword index, and resilient multi-model Gemini LLM fallback cascade.
 
-```
-+-------------------------------------------------------------------------------+
-|                        DocuMind-AI System Architecture                        |
-+-------------------------------------------------------------------------------+
-|  [Tier 1: Presentation]                                                       |
-|  Streamlit Web UI (Glassmorphic Light/Dark Theme, Chat Sidebar, PDF Ingest)   |
-+--------------------------------------┬----------------------------------------+
-                                       │ HTTP / REST API Calls
-                                       ▼
-|  [Tier 2: API Gateway]                                                        |
-|  FastAPI Server (Endpoints: /upload, /query, /chats, /documents, /status)     |
-+--------------------------------------┬----------------------------------------+
-                                       │ Async Pipeline Execution
-                                       ▼
-|  [Tier 3: Ingestion & Hybrid RAG Engine]                                     |
-|  • PyMuPDF (fitz) PDF Parser (Extracts text, tables & image markers)          |
-|  • Custom Recursive Character Splitter (500 chars / 50 overlap)              |
-|  • Sentence Transformers + Gemini Embeddings (384d / 768d vectors)           |
-|  • ChromaDB Vector Store (HNSW Index) + BM25 Sparse Index                    |
-|  • Reciprocal Rank Fusion (RRF k=60) Hybrid Candidate Reranker                |
-+--------------------------------------┬----------------------------------------+
-                                       │ Grounded Passages & Context
-                                       ▼
-|  [Tier 4: LLM Generation & Resilient Fallback Cascade]                        |
-|  • Primary LLM: Google Gemini API (gemini-2.5-flash / gemini-1.5-flash)       |
-|  • Automatic Rate-Limit Cascade (429 handling & exponential retry)            |
-|  • Source Citation Engine (Page-level excerpt badges & PDF downloads)          |
-+--------------------------------------┬----------------------------------------+
-                                       │ Persistence & State
-                                       ▼
-|  [Tier 5: Database & File Storage]                                            |
-|  • SQLite3 Chat History & User Session Database                              |
-|  • Local PDF Storage Directory (data/pdfs/ & uploads/)                       |
-+-------------------------------------------------------------------------------+
+```mermaid
+flowchart TD
+    subgraph Client ["Client Layer"]
+        StreamlitUI["Streamlit UI (frontend/app.py)"]
+    end
+
+    subgraph API ["REST API Layer"]
+        FastAPIApp["FastAPI Server (app/main.py)"]
+    end
+
+    subgraph Ingestion ["PDF Ingestion & Processing (app/ingest.py)"]
+        PyMuPDFParser["PyMuPDF (fitz) Extractor"]
+        TableImageProc["Markdown Table Finder & Image Marker"]
+        Chunker["Recursive Text Chunker (500 chars / 50 overlap)"]
+        PyMuPDFParser --> TableImageProc --> Chunker
+    end
+
+    subgraph Storage ["Hybrid Indexing Layer (app/embed.py)"]
+        DenseEmbed["Sentence Transformers / Gemini Embeddings"]
+        ChromaDBStore[("ChromaDB Vector Store (Persistent HNSW)")]
+        BM25Index["Rank-BM25 Sparse Index"]
+        Chunker --> DenseEmbed --> ChromaDBStore
+        Chunker --> BM25Index
+    end
+
+    subgraph Search ["Hybrid Search Engine (app/retrieve.py)"]
+        UserQuery["User Query"]
+        DenseSearch["Dense Vector Cosine Similarity"]
+        SparseSearch["BM25 Keyword & Acronym Search"]
+        RRFEngine["Reciprocal Rank Fusion (RRF k=60)"]
+        
+        UserQuery --> DenseSearch
+        UserQuery --> SparseSearch
+        ChromaDBStore --> DenseSearch
+        BM25Index --> SparseSearch
+        DenseSearch --> RRFEngine
+        SparseSearch --> RRFEngine
+    end
+
+    subgraph LLM ["Generation & Fallback Engine (app/chatbot.py)"]
+        RRFEngine --> GroundedContext["Top-k Grounded Context Chunks"]
+        GroundedContext --> FallbackCascade{"Multi-Provider Fallback Cascade"}
+        FallbackCascade -->|Primary| Gem25Flash["Google Gemini 2.5 Flash"]
+        FallbackCascade -->|429 Fallback| Gem15Flash["Google Gemini 1.5 Flash"]
+        FallbackCascade -->|Offline Fallback| OfflineMock["Local SQLite & Document Extractor"]
+    end
+
+    subgraph Output ["Answer Output"]
+        Gem25Flash --> FinalAns["Grounded Answer + Page & Chunk Citations"]
+        Gem15Flash --> FinalAns
+        OfflineMock --> FinalAns
+    end
+
+    StreamlitUI --> FastAPIApp
+    FastAPIApp --> Ingestion
+    FastAPIApp --> Search
+    Search --> LLM
+    Output --> StreamlitUI
 ```
 
 ---
