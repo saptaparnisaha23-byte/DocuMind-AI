@@ -1,12 +1,17 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from sentence_transformers import SentenceTransformer
 import chromadb
+from pathlib import Path
 
-# Load embedding model
-model = SentenceTransformer("all-MiniLM-L6-v2")
+_model = None
+
+def get_model():
+    global _model
+    if _model is None:
+        from sentence_transformers import SentenceTransformer
+        _model = SentenceTransformer("all-MiniLM-L6-v2")
+    return _model
 
 # Create ChromaDB client
-from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 client = chromadb.PersistentClient(path=str(PROJECT_ROOT / "chroma_db"))
 
@@ -100,6 +105,7 @@ def store_chunks(chunks, source_name, page_number):
         return
 
     # Batch encode all chunks for this page in a single model call
+    model = get_model()
     embeddings = model.encode(chunks).tolist()
 
     ids = [f"{source_name}_page_{page_number}_chunk_{index}" for index in range(len(chunks))]

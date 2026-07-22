@@ -448,7 +448,8 @@ if "model_preloaded" not in st.session_state:
     import threading
     def bg_preload():
         try:
-            from app.embed import model
+            from app.retrieve import get_model
+            get_model()
         except Exception:
             pass
     threading.Thread(target=bg_preload, daemon=True).start()

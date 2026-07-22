@@ -562,6 +562,7 @@ def ask_question(session_id, question, document=None):
             retrieval_mem["documents"] = []
             retrieval_mem["chapter"] = None
             retrieval_mem["page"] = None
+            save_retrieval_memory(session_id, retrieval_mem)
             
         query_type = triage.get("query_type", "general")
         active_topic = triage.get("active_topic", question)

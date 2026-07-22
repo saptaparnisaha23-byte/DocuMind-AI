@@ -1,9 +1,15 @@
-from sentence_transformers import SentenceTransformer
 import chromadb
-
-model = SentenceTransformer("all-MiniLM-L6-v2")
-
 from pathlib import Path
+
+_model = None
+
+def get_model():
+    global _model
+    if _model is None:
+        from sentence_transformers import SentenceTransformer
+        _model = SentenceTransformer("all-MiniLM-L6-v2")
+    return _model
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 client = chromadb.PersistentClient(path=str(PROJECT_ROOT / "chroma_db"))
 
@@ -21,6 +27,7 @@ def retrieve_chunks(question, top_k=3, document=None):
             "distances": [[]]
         }
 
+    model = get_model()
     embedding = model.encode(question).tolist()
 
     if document:
