@@ -1073,7 +1073,6 @@ elif st.session_state.page == "chat":
                     st.error(res_data.get("answer") or res.get("answer") or res.get("detail") or "Failed to generate response.")
 
                 st.session_state.pending_query = None
-                st.rerun(scope="fragment")
 
             query = st.chat_input(
                 "Ask anything about your uploaded documents...",
@@ -1117,7 +1116,6 @@ elif st.session_state.page == "chat":
                         "sources": res_data.get("sources", []),
                         "confidence": res_data.get("confidence", 95),
                     }
-                    st.rerun(scope="fragment")
                 else:
                     res_data = res.get("data", {}) if "data" in res else res
                     st.error(res_data.get("answer") or res.get("answer") or res.get("detail") or "Failed to generate response.")
