@@ -6,5 +6,5 @@ def configure_page():
         page_title="DocuMind AI",
         page_icon="📚",
         layout="wide",
-        initial_sidebar_state="collapsed"
+        initial_sidebar_state="expanded"
     )
