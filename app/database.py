@@ -1,9 +1,15 @@
 import sqlite3
-
-
 from pathlib import Path
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DB_NAME = str(PROJECT_ROOT / "documind.db")
+
+try:
+    import streamlit as st
+    cache_res = st.cache_resource(show_spinner=False)
+except Exception:
+    def cache_res(fn):
+        return fn
 
 
 def get_connection():
@@ -12,6 +18,7 @@ def get_connection():
     return conn
 
 
+@cache_res
 def initialize_database():
     conn = get_connection()
     cursor = conn.cursor()

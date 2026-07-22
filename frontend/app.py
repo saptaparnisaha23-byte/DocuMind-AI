@@ -25,14 +25,6 @@ import frontend.components.upload as upload
 import frontend.api as api
 import frontend.utilis as utilis
 
-# Force reload all modules so fresh component logic is loaded on every run
-importlib.reload(config)
-importlib.reload(sidebar)
-importlib.reload(home)
-importlib.reload(upload)
-importlib.reload(api)
-importlib.reload(utilis)
-
 from frontend.config import configure_page
 from frontend.components.sidebar import render_sidebar
 from frontend.components.home import render_home
@@ -178,17 +170,12 @@ configure_page()
 
 query_params = st.query_params
 
-# Theme detection and redirection (localStorage + prefers-color-scheme)
+# Theme detection (localStorage sync without hard browser redirects)
 theme_detector_js = '''
 <script>
 (function() {
     const urlParams = new URLSearchParams(window.location.search);
-    if (!urlParams.has('theme')) {
-        const savedTheme = localStorage.getItem('documind-theme') || 
-                            (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        urlParams.set('theme', savedTheme);
-        window.location.search = urlParams.toString();
-    } else {
+    if (urlParams.has('theme')) {
         localStorage.setItem('documind-theme', urlParams.get('theme'));
     }
 })();
@@ -420,27 +407,28 @@ if "pending_query" not in st.session_state:
 if "show_rename" not in st.session_state:
     st.session_state.show_rename = False
 
-# Load CSS Styles
-base_dir = Path(__file__).parent
-styles_dir = base_dir / "styles"
-css = ""
+# Load CSS Styles (Cached)
+@st.cache_data(show_spinner=False)
+def load_css_styles_cached(theme):
+    base_dir = Path(__file__).parent
+    styles_dir = base_dir / "styles"
+    css_content = ""
 
-# Load animations.css
-anim_css_path = styles_dir / "animations.css"
-if anim_css_path.exists():
-    css += anim_css_path.read_text(encoding="utf-8") + "\n"
+    anim_css_path = styles_dir / "animations.css"
+    if anim_css_path.exists():
+        css_content += anim_css_path.read_text(encoding="utf-8") + "\n"
 
-# Load app.css
-app_css_path = styles_dir / "app.css"
-if app_css_path.exists():
-    css += app_css_path.read_text(encoding="utf-8") + "\n"
+    app_css_path = styles_dir / "app.css"
+    if app_css_path.exists():
+        css_content += app_css_path.read_text(encoding="utf-8") + "\n"
 
-# Load theme CSS (dark.css or light.css)
-theme_css_path = styles_dir / f"{st.session_state.theme}.css"
-if theme_css_path.exists():
-    css += theme_css_path.read_text(encoding="utf-8") + "\n"
+    theme_css_path = styles_dir / f"{theme}.css"
+    if theme_css_path.exists():
+        css_content += theme_css_path.read_text(encoding="utf-8") + "\n"
 
-st.html(f"<style>{css}</style>")
+    return css_content
+
+st.html(f"<style>{load_css_styles_cached(st.session_state.theme)}</style>")
 
 # Pre-load embedding model in a background thread at startup to prevent lag on first query without blocking initial render
 if "model_preloaded" not in st.session_state:
@@ -1085,7 +1073,7 @@ elif st.session_state.page == "chat":
                     st.error(res_data.get("answer") or res.get("answer") or res.get("detail") or "Failed to generate response.")
 
                 st.session_state.pending_query = None
-                st.rerun()
+                st.rerun(scope="fragment")
 
             query = st.chat_input(
                 "Ask anything about your uploaded documents...",
@@ -1129,7 +1117,7 @@ elif st.session_state.page == "chat":
                         "sources": res_data.get("sources", []),
                         "confidence": res_data.get("confidence", 95),
                     }
-                    st.rerun()
+                    st.rerun(scope="fragment")
                 else:
                     res_data = res.get("data", {}) if "data" in res else res
                     st.error(res_data.get("answer") or res.get("answer") or res.get("detail") or "Failed to generate response.")

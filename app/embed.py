@@ -2,21 +2,30 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 import chromadb
 from pathlib import Path
 
-_model = None
-
-def get_model():
-    global _model
-    if _model is None:
-        from sentence_transformers import SentenceTransformer
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
-    return _model
-
-# Create ChromaDB client
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-client = chromadb.PersistentClient(path=str(PROJECT_ROOT / "chroma_db"))
 
-# Create or get collection
-collection = client.get_or_create_collection("documind_ai")
+try:
+    import streamlit as st
+    cache_res = st.cache_resource(show_spinner=False)
+except Exception:
+    def cache_res(fn):
+        return fn
+
+@cache_res
+def get_model():
+    from sentence_transformers import SentenceTransformer
+    return SentenceTransformer("all-MiniLM-L6-v2")
+
+@cache_res
+def get_chroma_collection():
+    client = chromadb.PersistentClient(path=str(PROJECT_ROOT / "chroma_db"))
+    return client.get_or_create_collection("documind_ai")
+
+class _CollectionProxy:
+    def __getattr__(self, name):
+        return getattr(get_chroma_collection(), name)
+
+collection = _CollectionProxy()
 
 
 import re
