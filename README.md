@@ -22,6 +22,22 @@ An AI-powered Retrieval-Augmented Generation (RAG) platform enabling semantic se
 
 ---
 
+## 🏷️ Official Releases & Project Deliverables
+
+| Release Tag | Stage Title | Description & Artifact Links |
+|---|---|---|
+| **[`v1.0-m1`](https://github.com/saptaparnisaha23-byte/DocuMind-AI/releases/tag/v1.0-m1)** | Milestone 1 (Alpha Build) | Core working RAG engine, PyMuPDF parsing, ChromaDB HNSW store, FastAPI backend, initial Streamlit UI, 3 ADRs. |
+| **[`v1.0-final`](https://github.com/saptaparnisaha23-byte/DocuMind-AI/releases/tag/v1.0-final)** | Milestone 2 (Final Build) | Multi-Document Comparison engine, adaptive prompt response levels, 20 Q&A eval report, reflection piece, 3rd year roadmap. |
+| **[`v1.0-showcase`](https://github.com/saptaparnisaha23-byte/DocuMind-AI/releases/tag/v1.0-showcase)** | Part 3 (Final Showcase & Submission) | Production Streamlit Cloud deployment, zero white-page rerun optimizations, resume PDF, showcase slide PNG/PDF, and test suite. |
+
+### 📄 Milestone & Release PDF/PNG Assets
+- 📊 **Showcase Slide (PNG)**: [`docs/showcase_slide.png`](docs/showcase_slide.png)
+- 📄 **Showcase Slide (PDF)**: [`docs/showcase_slide.pdf`](docs/showcase_slide.pdf)
+- 📝 **Resume Bullets (PDF)**: [`docs/resume_final.pdf`](docs/resume_final.pdf)
+- 📈 **20 Q&A Benchmark Report**: [`docs/eval_report.md`](docs/eval_report.md)
+
+---
+
 ## 📌 Problem Statement
 
 Reading and locating specific information inside long PDF documents (e.g., technical specifications, legal contracts, research papers) is time-consuming and inefficient. Traditional keyword searches fail when user queries use different phrasing or conceptual terminology than the source document.
