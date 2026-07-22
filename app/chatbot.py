@@ -121,6 +121,20 @@ def compute_keyword_score(query, text):
     if not query_tokens:
         return 0.0
     text_lower = text.lower()
+    
+    ACRONYMS = {
+        "mlr": ["multiple", "linear", "regression"],
+        "slr": ["simple", "linear", "regression"],
+        "ols": ["ordinary", "least", "squares"],
+        "mse": ["mean", "squared", "error"],
+        "rmse": ["root", "mean", "squared", "error"],
+        "mae": ["mean", "absolute", "error"],
+        "rss": ["residual", "sum", "squares"],
+    }
+    for acronym, full_forms in ACRONYMS.items():
+        if acronym in text_lower:
+            text_lower += " " + " ".join(full_forms)
+            
     matches = sum(1 for token in query_tokens if token in text_lower)
     return matches / len(query_tokens)
 
@@ -822,13 +836,13 @@ def ask_question(session_id, question, document=None):
                         chunk_num = meta.get("chunk", 1)
                         unique_chunk_id = f"{doc_name}_page_{page_num}_chunk_{chunk_num}"
                     
-                    seen_ids.add(unique_chunk_id)
-                    all_candidates.append({
-                        "doc": doc,
-                        "meta": meta,
-                        "distance": dist,
-                        "id": unique_chunk_id
-                    })
+                        seen_ids.add(unique_chunk_id)
+                        all_candidates.append({
+                            "doc": doc,
+                            "meta": meta,
+                            "distance": dist,
+                            "id": unique_chunk_id
+                        })
                 
             # Second Pass: Keyword/Exact Term search
             exact_terms = re.findall(r'"([^"]+)"', question)
