@@ -1190,16 +1190,17 @@ def ask_question(session_id, question, document=None):
           3. Continue citing the original document/page for the underlying concept at the bottom: "Source: [Document Name] - Page [Page Number] (Concept)".
           4. Keep the explanation concise and easy to understand. Do not mix AI-generated illustrations with grounded facts.
           
-        - [SIMPLE QUESTIONS / DEFINITIONS] (e.g. "What is OLS?", "What is eigenvalue?", "Define deadlock"):
-          Output a clean, compact 2–4 line explanation with important keywords in bold.
-          At the bottom, append EXACTLY: "Source: [Document Name] - Page [Page Number]".
-          Do NOT use any structural headers (no `📘 Overview`, no `🧠 Core Concept`, etc.) to keep it clean and compact.
+        - [SIMPLE QUESTIONS / DEFINITIONS] (e.g. "What is MLR?", "What is OLS?", "What is eigenvalue?", "Define deadlock"):
+          1. Provide a SIMPLE, CONCISE, and CRISP answer (1 paragraph of 2–3 sentences defining the concept, with key terms in **bold**).
+          2. Do NOT generate a long essay or huge wall of text.
+          3. Do NOT use structural headers (no `📘 Overview`, `🧠 Core Concept`, `⚙️ How it Works`, etc.) for simple "What is" questions.
+          4. At the bottom, append EXACTLY: "Source: [Document Name] - Page [Page Number]".
           
         - [COMPARISON / DIFFERENCES]:
           Compare the terms using a clean markdown table. Include columns like Feature, Concept A, and Concept B. Highlight key differences in bold.
           At the bottom, append: "Source: [Document Name] - Page [Page Number]".
           Do NOT use structural headers unless detailed explanations are requested.
-          Include rows whenever relevant: Definition, Formula, Advantages, Disadvantages, Feature Selection, Use Cases, Real-world Example, Memory Trick (optional). Only include rows relevant to the topic.
+          Include rows whenever relevant: Definition, Formula, Advantages, Disadvantages, Feature Selection, Use Cases, Real-world Example. Only include rows relevant to the topic.
           CRITICAL: If any values inside the table cells contain absolute value bars or pipe symbols (e.g. '|beta|' or '|x|'), you MUST escape them as '\\|' (e.g., '\\|beta\\|') so they do not break the markdown table columns.
           
         - [SUMMARY REQUESTS]:
@@ -1215,8 +1216,8 @@ def ask_question(session_id, question, document=None):
           Source: [Document Name] - Page [Page Number]
           Do NOT use structural headers.
           
-        - ["EXPLAIN" / "DETAILED NOTES" / "EXAM PREP" REQUESTS]:
-          Use the custom structured template to display visual styled boxes:
+        - ["EXPLAIN IN DETAIL" / "EXPLAIN DEEPLY" / "DETAILED NOTES" / "EXAM PREP" REQUESTS] (e.g. "Explain MLR in detail", "Explain deeply how OLS works", "Give detailed study notes"):
+          Provide a COMPREHENSIVE, IN-DEPTH, and DETAILED breakdown using the custom structured template:
           
           📘 Overview
           [Brief high-level overview of the concept/topic]
@@ -1227,8 +1228,8 @@ def ask_question(session_id, question, document=None):
           ⚙️ How it Works
           [Step-by-step mechanism or flow of operation]
           
-          🛠️ Important Components
-          [Break down of key structures, components, or parts]
+          🛠️ Important Components & Formulas
+          [Breakdown of key structures, components, or mathematical formulas]
           
           📝 Detailed Explanation
           [In-depth discussion, wrap code/syntax in backticks.]
@@ -1240,6 +1241,7 @@ def ask_question(session_id, question, document=None):
           - [Document Name] (Page [Page Number])
           
           Note: Only include an illustration section (`🤖 AI Illustration` formatted as above) if it genuinely improves understanding.
+
         """
 
         response = client.models.generate_content(
