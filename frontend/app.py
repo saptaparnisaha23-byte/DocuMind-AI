@@ -478,6 +478,20 @@ def render_chat_fragment(session_id, chats):
 # Configure page config first
 configure_page()
 
+# Initialize default session state attributes safely at top level
+if "session_id" not in st.session_state:
+    st.session_state["session_id"] = None
+if "page" not in st.session_state:
+    st.session_state["page"] = "home"
+if "active_document" not in st.session_state:
+    st.session_state["active_document"] = None
+if "theme" not in st.session_state:
+    st.session_state["theme"] = "dark"
+if "pending_query" not in st.session_state:
+    st.session_state["pending_query"] = None
+if "show_rename" not in st.session_state:
+    st.session_state["show_rename"] = False
+
 query_params = st.query_params
 
 # Theme handling
@@ -848,14 +862,14 @@ except Exception:
 render_sidebar(
     documents=documents,
     chats=chats,
-    active_session_id=st.session_state.session_id,
-    current_page=st.session_state.page,
-    current_theme=st.session_state.theme,
-    active_document=st.session_state.active_document,
+    active_session_id=st.session_state.get("session_id"),
+    current_page=st.session_state.get("page", "home"),
+    current_theme=st.session_state.get("theme", "dark"),
+    active_document=st.session_state.get("active_document"),
 )
 
 # Theme toggle button metadata for top-right header
-current_theme = st.session_state.theme
+current_theme = st.session_state.get("theme", "dark")
 
 light_params = "theme=light"
 dark_params = "theme=dark"
