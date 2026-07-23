@@ -17,30 +17,43 @@ def _link(theme="dark", **params):
             clean_params[key] = value
     return "/?" + urlencode(clean_params)
 
-def _relative_time(dt_str):
-    """Convert a datetime string to relative time like '2m ago', 'Yesterday'."""
+def _relative_time(dt_input):
+    """Convert a timestamp, float mtime, or string to relative time like 'Just now', '2m ago', 'Yesterday'."""
     try:
-        dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
-        now = datetime.utcnow()
+        if isinstance(dt_input, (int, float)):
+            dt = datetime.fromtimestamp(dt_input)
+            now = datetime.now()
+        elif isinstance(dt_input, str):
+            try:
+                dt = datetime.strptime(dt_input, "%Y-%m-%d %H:%M:%S")
+                now = datetime.utcnow()
+            except Exception:
+                dt = datetime.fromisoformat(dt_input)
+                now = datetime.now()
+        else:
+            dt = dt_input
+            now = datetime.now()
+
         delta = now - dt
-        
-        if delta.total_seconds() < 0 or delta < timedelta(minutes=1):
+        total_seconds = delta.total_seconds()
+
+        if total_seconds < 60:
             return "Just now"
-        elif delta < timedelta(hours=1):
-            mins = int(delta.total_seconds() / 60)
+        elif total_seconds < 3600:
+            mins = max(1, int(total_seconds / 60))
             return f"{mins}m ago"
-        elif delta < timedelta(hours=24):
-            hours = int(delta.total_seconds() / 3600)
+        elif total_seconds < 86400:
+            hours = int(total_seconds / 3600)
             return f"{hours}h ago"
-        elif delta < timedelta(days=2):
+        elif total_seconds < 172800:
             return "Yesterday"
-        elif delta < timedelta(days=7):
-            days = int(delta.days)
+        elif total_seconds < 604800:
+            days = int(total_seconds / 86400)
             return f"{days}d ago"
         else:
-            return dt.strftime("%b %d")
+            return dt.strftime("%b %d, %Y")
     except Exception:
-        return dt_str or ""
+        return str(dt_input or "")
 
 @st.cache_data(show_spinner=False)
 def get_doc_metadata(filename):
@@ -72,8 +85,8 @@ def get_doc_metadata(filename):
     else:
         size_str = f"{size_bytes / (1024 * 1024):.1f} MB"
         
-    upload_time = datetime.fromtimestamp(mtime).strftime("%b %d, %Y, %I:%M %p")
-    last_mod_str = datetime.fromtimestamp(mtime).strftime("%b %d, %Y, %I:%M %p")
+    upload_time = _relative_time(mtime)
+    last_mod_str = _relative_time(mtime)
     
     meta = {
         "pages": pages,
