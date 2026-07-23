@@ -42,6 +42,7 @@ def _relative_time(dt_str):
     except Exception:
         return dt_str or ""
 
+@st.cache_data(show_spinner=False)
 def get_doc_metadata(filename):
     """Retrieve and cache PDF pages and upload time dynamically."""
     if "doc_metadata_cache" not in st.session_state:
@@ -239,32 +240,26 @@ def render_sidebar(
             
             # Edit icon SVG
             edit_svg = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 12px; height: 12px;"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.83 20.013a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>'
-            
-            # Delete icon SVG
-            delete_svg = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 12px; height: 12px;"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>'
-
             # Pinned indicator
             pin_indicator = '<span style="font-size: 9px; margin-left: 2px;">📌</span>' if is_pinned else ''
 
             chat_items += f'''
             <div class="sidebar-nav-item chat-list-item {active_class}" style="padding: 6px 8px;">
                 <a href="{href}" target="_self" class="nav-item-left" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 8px; min-width: 0;">
-                    <span class="sidebar-item-icon">💬</span>
+                    <span class="sidebar-item-icon">&#x1F4AC;</span>
                     <div style="min-width: 0; flex: 1;">
                         <div class="nav-item-text" title="{_safe(title)}" style="font-size: 12px;">{_safe(title)}{pin_indicator}</div>
                         <div class="nav-item-meta" style="font-size: 10px; opacity: 0.7;">{time_str}</div>
                     </div>
                 </a>
-                <div class="sidebar-actions-hover" style="opacity: {1 if is_pinned else ''}">
-                    <a href="{_link(theme=current_theme, pin_chat=session_id)}" target="_self" class="sidebar-action-icon-btn" title="{pin_title}" {pin_icon_style}>
-                        {pin_svg}
-                    </a>
-                    <a href="{_link(theme=current_theme, rename_chat=session_id)}" target="_self" class="sidebar-action-icon-btn" title="Rename Chat">
-                        {edit_svg}
-                    </a>
-                    <a href="{_link(theme=current_theme, delete_chat=session_id)}" target="_self" class="sidebar-action-icon-btn" title="Delete Chat">
-                        {delete_svg}
-                    </a>
+                <div class="three-dots-container" tabindex="0" style="flex-shrink: 0;">
+                    <button class="sidebar-action-icon-btn" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--text-secondary);font-size:16px;line-height:1;font-weight:bold;" title="Chat options">&#x22EE;</button>
+                    <div class="doc-options-dropdown" style="right:-4px;top:24px;min-width:160px;">
+                        <a href="{_link(theme=current_theme, pin_chat=session_id)}" target="_self" class="doc-dropdown-item" {pin_icon_style}>&#x1F4CC; {"Unpin" if is_pinned else "Pin"}</a>
+                        <a href="{_link(theme=current_theme, rename_chat=session_id)}" target="_self" class="doc-dropdown-item">&#x270F;&#xFE0F; Rename</a>
+                        <div class="doc-dropdown-divider"></div>
+                        <a href="{_link(theme=current_theme, delete_chat=session_id)}" target="_self" class="doc-dropdown-item destructive-item">&#x1F5D1;&#xFE0F; Delete</a>
+                    </div>
                 </div>
             </div>
             '''
@@ -278,41 +273,40 @@ def render_sidebar(
     )
 
     sidebar_html = f"""
-    <aside class="sidebar">
-        <!-- TOP: Logo section -->
+    <aside class="sidebar" id="sidebarPanel">
+        <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close sidebar">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+        </button>
+
         <div class="logo-container">
-            <div class="logo-shield" aria-hidden="true">🧠</div>
+            <div class="logo-shield" aria-hidden="true">&#x1F9E0;</div>
             <div class="logo-title-wrap">
-                <div class="logo-title-row">
-                    <span class="logo-title-text">DocuMind AI</span>
-                </div>
+                <div class="logo-title-row"><span class="logo-title-text">DocuMind AI</span></div>
                 <span class="logo-sub-text">Enterprise Knowledge Assistant</span>
             </div>
         </div>
 
-        <!-- Upload Documents Card -->
-        <a href="{_link(theme=current_theme, page='upload')}" target="_self" class="upload-card" style="text-decoration: none; display: block; color: inherit;">
-            <div class="upload-icon" aria-hidden="true">📤</div>
+        <a href="{_link(theme=current_theme, page='upload')}" target="_self" class="upload-card" style="text-decoration:none;display:block;color:inherit;">
+            <div class="upload-icon" aria-hidden="true">&#x1F4E4;</div>
             <div class="upload-main-text">Click to Ingest PDF</div>
             <div class="upload-sub-text">Max size 200MB</div>
         </a>
 
-        <!-- PDF Library Section -->
         <div class="section-label-row">
             <span class="section-label">PDF Library</span>
             <span class="section-pill">{len(documents)} FILES</span>
         </div>
         {doc_items}
 
-        <!-- Recent Chats Section -->
         <div class="section-label-row">
             <span class="section-label">Recent Chats</span>
             <a href="{_link(theme=current_theme, page='home')}" target="_self" class="new-chat-link">+ NEW CHAT</a>
         </div>
 
-        <!-- Search chat history -->
         <div class="history-search-container">
-            <span class="history-search-icon">🔍</span>
+            <span class="history-search-icon">&#x1F50D;</span>
             <input type="text" class="history-search-input" placeholder="Search chat history..." onkeyup="filterChats(this.value)">
         </div>
 
@@ -325,27 +319,83 @@ def render_sidebar(
         const noMsg = document.getElementById('noChatsMsg');
         const q = query.toLowerCase().trim();
         let visibleCount = 0;
-        
         items.forEach(item => {{
             const textEl = item.querySelector('.nav-item-text');
             if (!textEl) return;
             const text = textEl.textContent.toLowerCase();
-            if (!q || text.includes(q)) {{
-                item.style.display = 'flex';
-                visibleCount++;
-            }} else {{
-                item.style.display = 'none';
-            }}
+            if (!q || text.includes(q)) {{ item.style.display='flex'; visibleCount++; }}
+            else {{ item.style.display='none'; }}
         }});
-        
-        if (noMsg) {{
-            if (visibleCount === 0 && q) {{
-                noMsg.style.display = 'block';
-            }} else {{
-                noMsg.style.display = 'none';
+        if (noMsg) {{ noMsg.style.display = (visibleCount===0 && q) ? 'block' : 'none'; }}
+    }}
+
+    // Mobile sidebar toggle - injects button into PARENT page so it's always visible
+    (function() {{
+        var parentDoc = window.parent.document;
+        var sidebar = document.getElementById('sidebarPanel');
+        var closeBtn = document.getElementById('sidebarCloseBtn');
+        if (!sidebar) return;
+
+        // Cleanup previous rerun elements
+        var old1 = parentDoc.getElementById('dm-sidebar-toggle');
+        var old2 = parentDoc.getElementById('dm-sidebar-backdrop');
+        if (old1) old1.remove();
+        if (old2) old2.remove();
+
+        // Create hamburger toggle button in parent page
+        var toggleBtn = parentDoc.createElement('button');
+        toggleBtn.id = 'dm-sidebar-toggle';
+        toggleBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>';
+        toggleBtn.style.cssText = 'display:none;position:fixed;top:12px;left:12px;z-index:1000000;background:var(--bg-card,#161b22);border:1px solid var(--border-color,#30363d);border-radius:10px;color:var(--text-primary,#e6edf3);width:40px;height:40px;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:all 0.2s ease;padding:0;';
+
+        // Create backdrop in parent page
+        var backdrop = parentDoc.createElement('div');
+        backdrop.id = 'dm-sidebar-backdrop';
+        backdrop.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);z-index:999998;opacity:0;pointer-events:none;transition:opacity 0.3s ease;';
+
+        parentDoc.body.appendChild(toggleBtn);
+        parentDoc.body.appendChild(backdrop);
+
+        function checkMobile() {{
+            var isMobile = window.parent.innerWidth <= 768;
+            toggleBtn.style.display = isMobile ? 'flex' : 'none';
+            backdrop.style.display = isMobile ? 'block' : 'none';
+            closeBtn.style.display = isMobile ? 'flex' : 'none';
+            if (!isMobile) {{
+                sidebar.classList.remove('open');
+                backdrop.style.opacity = '0';
+                backdrop.style.pointerEvents = 'none';
             }}
         }}
-    }}
+        checkMobile();
+        window.parent.addEventListener('resize', checkMobile);
+
+        function openSB() {{
+            sidebar.classList.add('open');
+            backdrop.style.opacity = '1';
+            backdrop.style.pointerEvents = 'auto';
+            toggleBtn.style.opacity = '0';
+            toggleBtn.style.pointerEvents = 'none';
+        }}
+        function closeSB() {{
+            sidebar.classList.remove('open');
+            backdrop.style.opacity = '0';
+            backdrop.style.pointerEvents = 'none';
+            toggleBtn.style.opacity = '1';
+            toggleBtn.style.pointerEvents = 'auto';
+        }}
+
+        toggleBtn.addEventListener('click', openSB);
+        backdrop.addEventListener('click', closeSB);
+        closeBtn.addEventListener('click', closeSB);
+
+        // Auto-close sidebar on link click (mobile UX)
+        sidebar.querySelectorAll('a[target="_self"]').forEach(function(link) {{
+            link.addEventListener('click', function() {{
+                if (window.parent.innerWidth <= 768) closeSB();
+            }});
+        }});
+    }})();
     </script>
     """
 

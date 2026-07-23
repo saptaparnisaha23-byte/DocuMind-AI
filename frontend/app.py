@@ -478,110 +478,7 @@ def render_chat_fragment(session_id, chats):
 # Configure page config first
 configure_page()
 
-# ── CRITICAL: Anti-flash CSS injected FIRST before any other rendering ──
-_anti_flash_css = '''
-<style>
-/* Anti-FOUC: Default to dark backgrounds to prevent white flash */
-html, body, .stApp,
-[data-testid="stAppViewContainer"],
-[data-testid="stMain"],
-[data-testid="stMainBlockContainer"],
-[data-testid="stHeader"],
-[data-testid="stSidebar"],
-[data-testid="stBottom"],
-[data-testid="stBottomBlockContainer"],
-section.main {
-    background-color: #0a0e14 !important;
-    color: #e6edf3 !important;
-}
-
-/* Hide Streamlit native loading/skeleton elements that flash white */
-[data-testid="stAppViewBlockContainer"] > div:empty,
-.stDeployButton,
-[data-testid="stDecoration"],
-[data-testid="stStatusWidget"],
-[data-testid="stToolbar"],
-header[data-testid="stHeader"],
-#MainMenu, footer {
-    display: none !important;
-    visibility: hidden !important;
-}
-
-/* Smooth page fade-in instead of jarring pop-in */
-.stApp {
-    animation: _docuMindFadeIn 0.3s ease-out;
-}
-@keyframes _docuMindFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-/* Hide native sidebar to prevent flash (we use custom HTML sidebar) */
-section[data-testid="stSidebar"] {
-    display: none !important;
-}
-
-/* Loading spinner shown during page transitions (auto-hidden when content renders) */
-.stApp:empty::after,
-.stApp:has([data-testid="stMainBlockContainer"]:empty)::after {
-    content: "";
-    position: fixed;
-    top: 50%;
-    left: calc(50% + 140px);
-    width: 32px;
-    height: 32px;
-    border: 3px solid rgba(88, 166, 255, 0.15);
-    border-top-color: #58a6ff;
-    border-radius: 50%;
-    animation: _docuMindSpin 0.7s linear infinite;
-    z-index: 999999;
-}
-@keyframes _docuMindSpin {
-    to { transform: rotate(360deg); }
-}
-</style>
-'''
-st.markdown(_anti_flash_css, unsafe_allow_html=True)
-
-# Theme-aware background fix (JS needs iframe context for parent access)
-st.html('''
-<script>
-(function() {
-    var theme = 'dark';
-    try {
-        var urlTheme = new URLSearchParams(window.parent.location.search).get('theme');
-        if (urlTheme) { theme = urlTheme; }
-        else {
-            var stored = localStorage.getItem('documind-theme');
-            if (stored) { theme = stored; }
-        }
-    } catch(e) {}
-    if (theme === 'light') {
-        var s = window.parent.document.createElement('style');
-        s.id = 'documind-light-flash-fix';
-        s.textContent = 'html,body,.stApp,[data-testid="stAppViewContainer"],[data-testid="stMain"],[data-testid="stMainBlockContainer"],section.main{background-color:#f8f9fb!important;color:#0f172a!important;}';
-        if (!window.parent.document.getElementById('documind-light-flash-fix')) {
-            window.parent.document.head.appendChild(s);
-        }
-    }
-})();
-</script>
-''')
-
 query_params = st.query_params
-
-# Theme detection (localStorage sync without hard browser redirects)
-theme_detector_js = '''
-<script>
-(function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('theme')) {
-        localStorage.setItem('documind-theme', urlParams.get('theme'));
-    }
-})();
-</script>
-'''
-st.html(theme_detector_js)
 
 # Theme handling
 if "theme" in query_params:
@@ -595,13 +492,75 @@ if "dev" in query_params:
 elif "developer_mode" not in st.session_state:
     st.session_state.developer_mode = False
 
+bg_color = "#f8f9fb" if st.session_state.theme == "light" else "#0a0e14"
+text_color = "#0f172a" if st.session_state.theme == "light" else "#e6edf3"
+
+# ── CRITICAL: Dynamic Theme-Aware Anti-flash CSS injected FIRST before rendering ──
+_anti_flash_css = f'''
+<style>
+html, body, .stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+[data-testid="stMainBlockContainer"],
+[data-testid="stHeader"],
+[data-testid="stSidebar"],
+[data-testid="stBottom"],
+[data-testid="stBottomBlockContainer"],
+section.main {{
+    background-color: {bg_color} !important;
+    color: {text_color} !important;
+}}
+
+/* Hide Streamlit native loading/skeleton elements that flash white */
+[data-testid="stAppViewBlockContainer"] > div:empty,
+.stDeployButton,
+[data-testid="stDecoration"],
+[data-testid="stStatusWidget"],
+[data-testid="stToolbar"],
+header[data-testid="stHeader"],
+#MainMenu, footer {{
+    display: none !important;
+    visibility: hidden !important;
+}}
+
+/* Smooth page fade-in instead of jarring pop-in */
+.stApp {{
+    animation: _docuMindFadeIn 0.2s ease-out;
+}}
+@keyframes _docuMindFadeIn {{
+    from {{ opacity: 0; }}
+    to {{ opacity: 1; }}
+}}
+
+/* Hide native sidebar to prevent flash (we use custom HTML sidebar) */
+section[data-testid="stSidebar"] {{
+    display: none !important;
+}}
+</style>
+'''
+st.markdown(_anti_flash_css, unsafe_allow_html=True)
+
+# Theme detection (localStorage sync without hard browser redirects)
+theme_detector_js = '''
+<script>
+(function() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('theme')) {
+            localStorage.setItem('documind-theme', urlParams.get('theme'));
+        }
+    } catch(e) {}
+})();
+</script>
+'''
+st.html(theme_detector_js)
+
 from urllib.parse import urlencode
 
 # Dialog and modal handlers from query parameters
 if "confirm_delete_doc" in query_params:
     doc_to_delete = query_params["confirm_delete_doc"]
     
-    # Build clean cancel url preserving current page/session context
     cancel_params = {"theme": st.session_state.theme}
     for k in ["session_id", "document", "page"]:
         if k in query_params and k != "confirm_delete_doc":
@@ -632,7 +591,6 @@ if "confirm_delete_doc" in query_params:
 if "view_details_doc" in query_params:
     doc_name = query_params["view_details_doc"]
     
-    # Build clean cancel url preserving current page/session context
     cancel_params = {"theme": st.session_state.theme}
     for k in ["session_id", "document", "page"]:
         if k in query_params and k != "view_details_doc":
@@ -712,7 +670,6 @@ if "delete_doc" in query_params:
         st.toast(f"🗑️ Deleted document {doc_to_delete}")
     else:
         st.toast(f"Failed to delete document: {delete_res.get('detail', 'Unknown error')}")
-    # clear params and reload
     current_theme = st.session_state.theme
     st.query_params.clear()
     st.query_params["theme"] = current_theme
@@ -775,35 +732,32 @@ if "query" in query_params:
     st.query_params.clear()
     st.query_params["session_id"] = new_session_id
     st.query_params["theme"] = current_theme
-    # Show loading state immediately so user doesn't see blank screen
-    st.markdown('''
-    <div style="display:flex;align-items:center;justify-content:center;min-height:60vh;flex-direction:column;gap:16px;">
-        <div style="width:40px;height:40px;border:3px solid rgba(88,166,255,0.15);border-top-color:#58a6ff;border-radius:50%;animation:_docuMindSpin 0.7s linear infinite;"></div>
-        <div style="font-size:14px;color:#8b949e;font-family:Inter,sans-serif;">Preparing your chat session...</div>
-    </div>
-    ''', unsafe_allow_html=True)
     st.rerun()
 
-# Routing handling from standard clicks
+# Document Scope Handling (Preserved in st.session_state across all reruns)
+if "active_document" not in st.session_state:
+    st.session_state.active_document = None
+
+if "document" in query_params:
+    doc_val = query_params["document"]
+    if doc_val == "CLEAR" or not doc_val:
+        st.session_state.active_document = None
+    else:
+        st.session_state.active_document = doc_val
+
+# Page / Session Routing Handling
 if "session_id" in query_params:
     st.session_state.page = "chat"
     st.session_state.session_id = query_params["session_id"]
-    st.session_state.active_document = None
 elif "page" in query_params:
     st.session_state.page = query_params["page"]
-    st.session_state.active_document = None
-    st.session_state.session_id = None
-elif "document" in query_params:
-    st.session_state.page = "home"
-    st.session_state.active_document = query_params["document"]
-    st.session_state.session_id = None
+    if query_params["page"] == "home" and "session_id" not in query_params:
+        st.session_state.session_id = None
 else:
     if "page" not in st.session_state:
         st.session_state.page = "home"
     if "session_id" not in st.session_state:
         st.session_state.session_id = None
-    if "active_document" not in st.session_state:
-        st.session_state.active_document = None
 
 if "upload_success" in st.session_state:
     st.toast(st.session_state.pop("upload_success"), icon="✅")

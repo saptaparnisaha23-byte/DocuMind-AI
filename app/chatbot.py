@@ -16,9 +16,19 @@ from app.memory import (
 
 load_dotenv()
 
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY")
-)
+import streamlit as st
+
+@st.cache_resource(show_spinner=False)
+def get_gemini_client():
+    return genai.Client(
+        api_key=os.getenv("GEMINI_API_KEY")
+    )
+
+class GeminiClientProxy:
+    def __getattr__(self, name):
+        return getattr(get_gemini_client(), name)
+
+client = GeminiClientProxy()
 
 def is_conversational(text):
     text_clean = re.sub(r'[^\w\s]', '', text.lower().strip())

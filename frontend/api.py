@@ -18,6 +18,7 @@ def check_standalone_cached():
 STANDALONE_MODE = check_standalone_cached()
 
 def upload_documents(files):
+    get_documents.clear()
     if STANDALONE_MODE:
         import shutil
         from app.ingest import ingest_pdf
@@ -53,6 +54,7 @@ def upload_documents(files):
     except Exception as e:
         return {"success": False, "detail": f"Connection error: {e}"}
 
+@st.cache_data(ttl=2, show_spinner=False)
 def get_documents():
     if STANDALONE_MODE:
         UPLOAD_FOLDER = Path("uploads")
@@ -78,6 +80,7 @@ def ask_question(session_id, question, document=None):
     if STANDALONE_MODE:
         from app.chatbot import ask_question as run_ask
         res = run_ask(session_id, question, document)
+        get_chats.clear()
         return {
             "success": res["success"],
             "data": {
@@ -97,10 +100,12 @@ def ask_question(session_id, question, document=None):
             f"{BASE_URL}/ask",
             json=payload
         )
+        get_chats.clear()
         return response.json()
     except Exception as e:
         return {"success": False, "detail": f"Connection error: {e}"}
 
+@st.cache_data(ttl=2, show_spinner=False)
 def get_chats():
     if STANDALONE_MODE:
         from app.memory import list_sessions
@@ -132,6 +137,7 @@ def get_chat(session_id):
         return {"success": True, "messages": []}
 
 def delete_chat(session_id):
+    get_chats.clear()
     if STANDALONE_MODE:
         from app.memory import delete_session
         delete_session(session_id)
@@ -148,6 +154,7 @@ def delete_chat(session_id):
         return {"success": False, "detail": str(e)}
 
 def delete_document_api(filename):
+    get_documents.clear()
     if STANDALONE_MODE:
         try:
             UPLOAD_FOLDER = Path("uploads")
