@@ -235,22 +235,31 @@ DocuMind-AI includes two major mini-extensions that go beyond standard single-fi
 
 ## ⚠️ Known Limitations
 
-- **Scanned Image-Only PDFs**: Pure scanned image PDFs without an embedded OCR text layer require pre-OCR processing (planned for future release).
-- **Large File Processing Latency**: Parsing and generating dense embeddings for 200+ page PDFs takes 15–30 seconds on local CPU hardware.
+- **Streamlit Cloud Performance:** While the application functions correctly on localhost, the deployed Streamlit Cloud version may experience full-page reruns and occasional UI flickering due to Streamlit's execution model and cloud resource limitations. Core RAG functionality, document ingestion, retrieval, and citation generation continue to work as intended.
+
+- **Scanned Image PDFs:** The current version supports text-based PDFs. Image-only or scanned PDFs require OCR preprocessing before ingestion.
+
+- **Large PDF Processing:** Uploading and indexing very large documents (200+ pages) may take additional time because embeddings are generated on the CPU.
+
+- **Cloud Resource Constraints:** Free-tier cloud environments provide limited CPU and memory resources, which can affect responsiveness during document indexing and retrieval.
 
 ---
 
-## 🗺️ What I'd Do in 3rd Year
+## 🚀 Future Enhancements
 
-See the complete 12-month roadmap in `docs/design_doc.md`:
+Future versions of **DocuMind AI** will focus on improving scalability, responsiveness, and user experience by migrating the frontend to a modern web stack.
 
-- Hybrid search optimization with Qdrant and pgvector.
-- Multi-format document ingestion (DOCX, PPTX, HTML, Markdown).
-- Agentic RAG workflows (query decomposition and self-verification using LangGraph).
-- Containerized cloud deployment with Docker Compose, GitHub Actions CI/CD, and Prometheus metrics.
+### Planned Improvements
 
----
-
+- Replace the current **Streamlit frontend** with a **React.js + Node.js** web application to provide a smoother, single-page user experience without full-page reruns.
+- Implement WebSocket-based real-time chat for faster responses.
+- Add drag-and-drop document uploads with upload progress indicators.
+- Improve deployment using Docker, Nginx, and cloud platforms such as Render, Railway, or Azure.
+- Support OCR for scanned PDFs and image-based documents.
+- Extend document support to DOCX, PPTX, HTML, and Markdown.
+- Integrate LangGraph for agentic RAG workflows and self-verification.
+- Replace ChromaDB with Qdrant or pgvector for larger-scale deployments.
+- Add comprehensive RAG evaluation using Ragas and automated CI/CD with GitHub Actions.
 ## 📄 License + Acknowledgements
 
 - **License**: MIT License
